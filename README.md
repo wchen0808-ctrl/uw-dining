@@ -1,0 +1,83 @@
+# UW 食堂菜单（PWA）
+
+一个中文手机网页，用来查看 UW–Madison 五个学校食堂（Carson's、Four Lakes、Gordon Avenue、Liz's、Rheta's）每天的菜单。可以添加到手机主屏幕，像 App 一样使用，没网时也能看已经打开过的菜单。
+
+## 功能
+
+- 打开默认显示今天，按当前时间自动选早餐 / 午餐 / 晚餐（10:30 前早餐，14:30 前午餐，之后晚餐）
+- 顶部日期条可以翻到未来两周；在菜单区域左右滑动换一天
+- 切换食堂，自动记住上次选的（localStorage）
+- 每道菜显示所在窗口、热量、素食 / 纯素 / 清真标签和中文过敏原（例如：含：小麦、大豆）
+- 筛选：素食、纯素、清真、无常见过敏原（Top 9 Free）
+- 搜索当天所有食堂的菜，结果显示“食堂 · 餐次 · 窗口”
+- PWA：manifest + service worker（网络优先，没网时用缓存），支持深色模式，主色 UW 红 `#c5050c`
+
+## 目录结构
+
+```
+index.html                     根目录跳转到 cafeteria/
+cafeteria/                     网页本体
+  index.html  app.js  style.css  sw.js  manifest.webmanifest  icons/
+  data/halls.json              食堂列表
+  data/YYYY-MM-DD.json         每天的菜单（今天起 14 天，保留过去 7 天）
+scripts/fetch_menus.py         抓取脚本（只用 Python 标准库）
+.github/workflows/update-menus.yml   每天自动抓取两次，有变化就提交
+tests/iphone.test.cjs          Playwright iPhone 尺寸测试
+```
+
+## 数据从哪里来
+
+菜单来自 UW Housing Dining 在 Nutrislice 上的接口
+`https://wisc-housingdining.api.nutrislice.com/menu/api`。
+这个接口不允许网页直接跨域读取，所以由 `scripts/fetch_menus.py` 提前抓好，存成静态 JSON 文件，网页只读这些文件。
+
+脚本的处理规则：
+
+- 窗口名取自 `day.menu_info[menu_id].section_options.display_name`，按 `position` 排序（不用 `is_section_title`，那些几乎都叫 “Build Your Own”）
+- 菜名 `food.name`，标签 `food.icons.food_icons[].name`（丢掉 `Disclaimer`），热量 `food.rounded_nutrition_info.calories`
+- 名字里带 `OrderIt` 的条目会被过滤掉
+- 文件内容没变就不改写，避免空提交
+
+在本地手动更新数据：
+
+```bash
+python scripts/fetch_menus.py
+```
+
+## 开启 GitHub Pages
+
+1. 把这个仓库推送到 GitHub（仓库需要是公开的，免费账号的私有仓库不能用 Pages）。
+2. 打开仓库页面 → **Settings** → 左侧 **Pages**。
+3. **Build and deployment** 里的 **Source** 选 **Deploy from a branch**。
+4. **Branch** 选 `main`，文件夹选 `/ (root)`，点 **Save**。
+5. 等一两分钟，页面顶部会显示网址，一般是
+   `https://<你的用户名>.github.io/<仓库名>/`，它会自动跳转到 `cafeteria/`。
+
+## 开启自动更新菜单
+
+工作流 `.github/workflows/update-menus.yml` 每天 UTC 06:15 和 16:15 各运行一次（约 Madison 当地 0:15 和 10:15）。
+
+1. 仓库 → **Settings** → **Actions** → **General**。
+2. **Workflow permissions** 选 **Read and write permissions**，点 **Save**（工作流需要它来提交新数据）。
+3. 想立刻跑一次：**Actions** 标签页 → **更新食堂菜单** → **Run workflow**。
+
+说明：GitHub 会在仓库 60 天没有活动时暂停定时任务。机器人每天提交数据一般就算活动；如果被暂停了，到 Actions 页面重新启用即可。
+
+## 添加到手机主屏幕
+
+- **iPhone（Safari）**：打开网址 → 点底部分享按钮 → **添加到主屏幕**
+- **Android（Chrome）**：打开网址 → 右上角菜单 → **添加到主屏幕 / 安装应用**
+
+## 测试
+
+```bash
+npm i -D playwright
+npx playwright install webkit chromium
+node tests/iphone.test.cjs
+```
+
+测试会起一个本地服务器，用 iPhone 15 / iPhone SE（WebKit，浅色和深色）和 Chromium 检查：默认日期和餐次、窗口分组、过敏原、记住食堂、筛选、滑动换天、翻周、搜索、manifest，以及离线缓存。截图保存在 `test-results/`。
+
+## 免责声明
+
+数据来自 UW Housing Dining，仅供参考。过敏原和饮食标签可能有变动或交叉接触，**过敏请以食堂现场标注为准**。本项目与 UW–Madison 官方无关。

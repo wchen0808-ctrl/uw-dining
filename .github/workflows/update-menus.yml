@@ -1,0 +1,40 @@
+name: 更新食堂菜单
+
+on:
+  schedule:
+    # UTC 时间；约等于 Madison 当地 0:15 和 10:15（冬令时，夏令时会早一小时）
+    - cron: "15 6 * * *"
+    - cron: "15 16 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-menus
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 抓取接下来 14 天的菜单
+        run: python scripts/fetch_menus.py
+
+      - name: 有变化就提交
+        run: |
+          git add -A cafeteria/data
+          if git diff --cached --quiet; then
+            echo "菜单没有变化"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "更新菜单数据 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
