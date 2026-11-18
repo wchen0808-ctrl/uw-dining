@@ -19,7 +19,10 @@
 <header class="top">
   <div class="title-row">
     <h1>UW 食堂菜单</h1>
-    <button id="todayBtn" class="today-btn" type="button">回到今天</button>
+    <div class="title-btns">
+      <button id="todayBtn" class="today-btn" type="button">回到今天</button>
+      <button id="mapBtn" class="today-btn" type="button" aria-pressed="false" aria-controls="mapPanel">地图</button>
+    </div>
   </div>
   <nav id="halls" class="halls" aria-label="选择食堂"></nav>
   <div class="dates-wrap">
@@ -33,6 +36,12 @@
     <button type="button" data-meal="dinner">晚餐</button>
   </div>
 </header>
+
+<section id="mapPanel" class="map-panel" hidden aria-label="食堂地图">
+  <div class="map-head"><span id="mapTitle">食堂地图</span><small id="mapHint">点食堂看硬菜</small></div>
+  <div id="mapBox" class="map-box"></div>
+  <p class="map-note">校园示意图，位置大致准确，比例仅供参考</p>
+</section>
 
 <section class="tools">
   <label class="search">

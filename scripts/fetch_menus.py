@@ -162,6 +162,8 @@ def parse_day(day, tr):
             entry["d"] = diet
         if alg:
             entry["a"] = alg
+        if food.get("food_category") in ("entree", "meat"):
+            entry["m"] = 1  # 主菜，用于地图上的“今日硬菜”
         st["items"].append(entry)
     ordered = sorted(stations.values(), key=lambda s: (s["pos"], s["name"]))
     out = []
@@ -197,8 +199,18 @@ def main():
     wanted = {d.isoformat() for d in dates}
 
     schools = get_json("/schools/") or []
-    halls = [{"slug": s["slug"], "name": s["name"]} for s in schools
-             if any(m.get("slug") in MEALS for m in s.get("active_menu_types") or [])]
+    halls = []
+    for s in schools:
+        if not any(m.get("slug") in MEALS for m in s.get("active_menu_types") or []):
+            continue
+        h = {"slug": s["slug"], "name": s["name"]}
+        geo = s.get("geolocation") or {}
+        if geo.get("latitude") and geo.get("longitude"):
+            h["lat"] = round(geo["latitude"], 6)
+            h["lng"] = round(geo["longitude"], 6)
+        if s.get("address"):
+            h["addr"] = s["address"].replace(", USA", "")
+        halls.append(h)
     halls.sort(key=lambda h: h["name"])
     if not halls:
         print("没有拿到食堂列表，退出", file=sys.stderr)

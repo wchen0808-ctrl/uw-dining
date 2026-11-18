@@ -105,6 +105,22 @@ async function run(browserType, deviceName, scheme) {
   await page.screenshot({ path: path.join(SHOTS, `${tag}-3-search.png`) });
   await page.click("#clearQ");
 
+  // 地图：点图钉看硬菜，再跳到完整菜单
+  await page.click('.meals [data-meal="dinner"]');
+  await page.click("#mapBtn");
+  await page.waitForSelector(".m-hall");
+  check(await page.locator(".m-hall").count() === 5, "地图上有 5 个食堂");
+  await page.locator('.m-hall[data-hall="rhetas-market"] .pin').click();
+  await page.waitForSelector("#mapCard:not([hidden])");
+  const dishes = await page.locator("#mapCard li b").allInnerTexts();
+  check(dishes.length > 0, `点 Rheta's 显示硬菜：${dishes.join("、")}`);
+  const inside = await page.evaluate(() => { const b = document.querySelector("#mapBox").getBoundingClientRect(), c = document.querySelector("#mapCard").getBoundingClientRect(); return c.left >= b.left - 1 && c.right <= b.right + 1; });
+  check(inside, "卡片没有超出地图");
+  await page.locator("#mapPanel").screenshot({ path: path.join(SHOTS, `${tag}-4-map.png`) });
+  await page.click("#mapCard .go");
+  check(await page.locator('.halls [aria-pressed="true"]').innerText() === "Rheta's", "点卡片按钮切到 Rheta's 菜单");
+  await page.click("#mapBtn");
+
   // PWA
   const manifest = await page.evaluate(async () => (await fetch(document.querySelector('link[rel=manifest]').href)).json());
   check(manifest.display === "standalone" && manifest.icons.length >= 3, "manifest 有效");
@@ -123,6 +139,27 @@ async function run(browserType, deviceName, scheme) {
   await browser.close();
 }
 
+// 电脑上：鼠标悬停就显示硬菜，移开就消失
+async function desktopHover() {
+  console.log("\n== chromium-desktop-hover ==");
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(`${base}/cafeteria/`);
+  await page.waitForSelector(".station, .empty-state");
+  await page.click("#mapBtn");
+  await page.locator('.m-hall[data-hall="gordon-avenue-market"] .pin').hover();
+  await page.waitForSelector("#mapCard:not([hidden])");
+  check((await page.locator("#mapCard h3").innerText()).includes("Gordon"), "悬停 Gordon 显示卡片");
+  await page.locator("#mapPanel").screenshot({ path: path.join(SHOTS, "desktop-hover-map.png") });
+  await page.mouse.move(5, 890);
+  await page.waitForTimeout(200);
+  check(await page.locator("#mapCard").isHidden(), "鼠标移开后卡片消失");
+  await page.reload();
+  await page.waitForSelector(".m-hall");
+  check(await page.locator("#mapPanel").isVisible(), "localStorage 记住地图是打开的");
+  await browser.close();
+}
+
 let base;
 (async () => {
   fs.mkdirSync(SHOTS, { recursive: true });
@@ -132,6 +169,7 @@ let base;
     await run(webkit, "iPhone 15", "light");
     await run(webkit, "iPhone SE", "dark");
     await run(chromium, "iPhone 15", "light"); // WebKit 驱动下 SW 支持有限，用 Chromium 测离线
+    await desktopHover();
   } finally {
     srv.close();
   }

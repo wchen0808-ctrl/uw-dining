@@ -186,6 +186,7 @@
     if (token !== renderToken) return;
     renderMeals(day);
     renderMenu(day);
+    if (state.mapOpen) renderMap(day);
     if (anim) {
       el.menu.classList.remove("slide-l", "slide-r");
       void el.menu.offsetWidth;
@@ -207,6 +208,152 @@
     state.date = dateList[i];
     render(n > 0 ? "slide-l" : "slide-r");
   }
+
+  // ---------- 地图 ----------
+  // 用经纬度直接投影到 SVG 上（这一小片校园可以当成平面）
+  const BOUNDS = { w: -89.4205, e: -89.3945, n: 43.0815, s: 43.0695 };
+  const MAP_W = 600, MAP_H = Math.round(MAP_W * ((BOUNDS.n - BOUNDS.s) * 111) / ((BOUNDS.e - BOUNDS.w) * 111 * Math.cos(43.075 * Math.PI / 180)));
+  const P = (lat, lng) => [
+    +((lng - BOUNDS.w) / (BOUNDS.e - BOUNDS.w) * MAP_W).toFixed(1),
+    +((BOUNDS.n - lat) / (BOUNDS.n - BOUNDS.s) * MAP_H).toFixed(1),
+  ];
+  const line = (pts) => pts.map((p, i) => (i ? "L" : "M") + P(...p).join(",")).join(" ");
+  const SHORE = [[43.0796, -89.4205], [43.0793, -89.4178], [43.0789, -89.4140], [43.0791, -89.4112], [43.0788, -89.4085],
+    [43.0786, -89.4068], [43.0780, -89.4040], [43.0774, -89.4012], [43.0772, -89.3995], [43.0769, -89.3970], [43.0768, -89.3945]];
+  const ROADS = [
+    { name: "University Ave", cls: "major", pts: [[43.0731, -89.3945], [43.0731, -89.4080], [43.0738, -89.4130], [43.0745, -89.4205]], label: [43.0727, -89.4110] },
+    { name: "Johnson St", cls: "major", pts: [[43.0719, -89.3945], [43.0719, -89.4060]], label: [43.0715, -89.4045] },
+    { name: "Park St", cls: "minor", pts: [[43.0773, -89.4003], [43.0695, -89.4003]], label: null },
+    { name: "Dayton St", cls: "minor", pts: [[43.0709, -89.3945], [43.0709, -89.4003]], label: [43.0705, -89.3965] },
+    { name: "Observatory Dr", cls: "minor", pts: [[43.0757, -89.4003], [43.0760, -89.4035], [43.0770, -89.4060], [43.0768, -89.4095], [43.0763, -89.4135], [43.0766, -89.4180]], label: [43.0758, -89.4125] },
+    { name: "Elm Dr", cls: "minor", pts: [[43.0790, -89.4188], [43.0735, -89.4192]], label: null },
+    { name: "Babcock Dr", cls: "minor", pts: [[43.0766, -89.4140], [43.0731, -89.4142]], label: null },
+  ];
+  const LANDMARKS = [
+    { name: "Bascom Hall", at: [43.0753, -89.4041] },
+    { name: "Memorial Union", at: [43.0768, -89.3998] },
+  ];
+
+  function mapSVG() {
+    const shore = SHORE.map((p) => P(...p));
+    const lake = `M0,0 L${MAP_W},0 L${shore[shore.length - 1].join(",")} ` +
+      shore.slice().reverse().map((p) => "L" + p.join(",")).join(" ") + " Z";
+    const path = line(SHORE.map(([a, b]) => [a - 0.00035, b]));
+    const [bx1, by1] = P(43.0760, -89.4045), [bx2, by2] = P(43.0748, -89.4008);
+    const halls = state.halls.filter((h) => h.lat).map((h) => {
+      const [x, y] = P(h.lat, h.lng);
+      const below = y < 80; // 太靠湖边的标签放到下面
+      return `<g class="m-hall${h.slug === state.hall ? " current" : ""}" data-hall="${esc(h.slug)}" tabindex="0" role="button"
+          aria-label="${esc(h.name)}，查看今日硬菜" transform="translate(${x},${y})">
+        <circle cy="-24" r="30" fill="transparent"/>
+        <path class="pin" d="M0,0 C-6,-11 -16,-17 -16,-29 A16,16 0 1 1 16,-29 C16,-17 6,-11 0,0 Z"/>
+        <circle class="pin-dot" cy="-29" r="6"/>
+        <text y="${below ? 24 : -52}" text-anchor="middle">${esc(shortHall(h.name).replace(/\s*Avenue$/, ""))}</text>
+      </g>`;
+    }).join("");
+    return `<svg viewBox="0 0 ${MAP_W} ${MAP_H}" role="img" aria-label="UW–Madison 校园食堂位置示意图">
+      <path class="m-lake" d="${lake}"/>
+      <text class="m-lake-label" x="${MAP_W / 2}" y="30" text-anchor="middle">Lake Mendota 门多塔湖</text>
+      <rect class="m-green" x="${bx1}" y="${by1}" width="${bx2 - bx1}" height="${by2 - by1}" rx="6"/>
+      ${ROADS.map((r) => `<path class="m-road ${r.cls}" d="${line(r.pts)}"/>`).join("")}
+      <path class="m-path" d="${path}"/>
+      ${ROADS.filter((r) => r.label).map((r) => { const [x, y] = P(...r.label); return `<text class="m-road-label" x="${x}" y="${y}" text-anchor="middle">${r.name}</text>`; }).join("")}
+      ${(() => { const [x, y] = P(43.0745, -89.4003); return `<text class="m-road-label" x="${x + 5}" y="${y}" transform="rotate(90 ${x + 5} ${y})">Park St</text>`; })()}
+      ${LANDMARKS.map((l) => { const [x, y] = P(...l.at); return `<g class="m-landmark"><circle cx="${x}" cy="${y}" r="3"/><text x="${x}" y="${y + 18}" text-anchor="middle">${l.name}</text></g>`; }).join("")}
+      ${halls}
+    </svg><div id="mapCard" class="map-card" hidden></div>`;
+  }
+
+  const MEAT = /\b(beef|chicken|pork|salmon|shrimp|cod|tilapia|brisket|lamb|turkey|steak|ribs?|fish|mahi|haddock|ham|sausage|kielbasa|meatballs?|gyro|barbacoa|carnitas?|birria|bulgogi|burnt ends|meatloaf|wings?|drumsticks?|tenders)\b/i;
+  const NOT_MAIN = /\b(gravy|sauce|egg|eggs|scrambled|pancakes?|popcake|waffle|french toast|salad filling|oatmeal|grits|condiment)\b/i;
+  function hardDishes(hallSlug, day, meal, n = 4) {
+    const stations = (((day || {}).halls || {})[hallSlug] || {})[meal] || [];
+    const best = [];
+    for (const st of stations) {
+      let top = null, topScore = -1;
+      for (const it of st.items) {
+        if (!it.m || NOT_MAIN.test(it.n)) continue;
+        const score = (MEAT.test(it.n) && !/chick'n|plant|vegan|jackfruit/i.test(it.n) ? 1000 : 0) + (it.cal || 0) - (/pizza/i.test(it.n) ? 400 : 0);
+        if (score > topScore) { top = it; topScore = score; }
+      }
+      if (top) best.push({ it: top, st: st.name, score: topScore });
+    }
+    return best.sort((a, b) => b.score - a.score).slice(0, n);
+  }
+
+  const canHover = window.matchMedia("(hover: hover)").matches;
+  let mapDay = null, mapDrawnFor = "";
+  function renderMap(day) {
+    mapDay = day;
+    const box = $("#mapBox");
+    const key = state.halls.map((h) => h.slug).join() + "|" + state.hall;
+    if (mapDrawnFor !== key) { box.innerHTML = mapSVG(); mapDrawnFor = key; }
+    const d = parseIso(state.date);
+    $("#mapTitle").textContent = `${state.date === todayIso ? "今天" : `${d.getMonth() + 1}月${d.getDate()}日`}${MEAL_ZH[state.meal]} · 食堂地图`;
+    $("#mapHint").textContent = canHover ? "鼠标悬停看硬菜" : "点食堂看硬菜";
+    const card = $("#mapCard");
+    if (!card.hidden && card.dataset.hall) showCard(card.dataset.hall);
+  }
+  function showCard(slug) {
+    const box = $("#mapBox"), card = $("#mapCard");
+    const h = state.halls.find((x) => x.slug === slug);
+    if (!h) return;
+    const list = hardDishes(slug, mapDay, state.meal);
+    card.dataset.hall = slug;
+    card.innerHTML = `<h3>${esc(h.name)}</h3>
+      <div class="sub">${MEAL_ZH[state.meal]}硬菜${h.addr ? " · " + esc(h.addr.split(",")[0]) : ""}</div>
+      ${list.length ? `<ol>${list.map(({ it, st }) => `<li><b>${esc(it.zh || it.n)}</b>${it.cal != null ? ` <span class="cal">${it.cal} 千卡</span>` : ""}<small>${esc(st)}${it.zh ? " · " + esc(it.n) : ""}</small></li>`).join("")}</ol>`
+        : `<div class="none">${mapDay ? `这一餐没有菜单` : "暂无数据"}</div>`}
+      <button type="button" class="go" data-go="${esc(slug)}">看 ${esc(shortHall(h.name))} 完整菜单 →</button>`;
+    card.hidden = false;
+    box.querySelectorAll(".m-hall").forEach((g) => g.classList.toggle("on", g.dataset.hall === slug));
+    // 窄屏：卡片排在地图下面；宽屏：浮在图钉旁边，不出界
+    if (getComputedStyle(card).position === "static") return;
+    const g = box.querySelector(`.m-hall[data-hall="${CSS.escape(slug)}"]`);
+    const br = box.getBoundingClientRect(), pr = g.querySelector(".pin").getBoundingClientRect();
+    const cw = card.offsetWidth, ch = card.offsetHeight;
+    let left = pr.left - br.left + pr.width / 2 - cw / 2;
+    left = Math.max(8, Math.min(left, br.width - cw - 8));
+    let top = pr.bottom - br.top + 6;
+    if (top + ch > br.height - 4) top = Math.max(4, pr.top - br.top - ch - 6);
+    card.style.left = left + "px"; card.style.top = top + "px";
+  }
+  function hideCard() {
+    const card = $("#mapCard"); if (!card) return;
+    card.hidden = true; delete card.dataset.hall;
+    $("#mapBox").querySelectorAll(".m-hall.on").forEach((g) => g.classList.remove("on"));
+  }
+  function setMapOpen(open) {
+    state.mapOpen = open;
+    $("#mapPanel").hidden = !open;
+    $("#mapBtn").setAttribute("aria-pressed", open);
+    lsSet("uwdining.map", open ? "1" : "");
+    if (open) loadDay(state.date).then(renderMap); else hideCard();
+  }
+  const mapBox = $("#mapBox");
+  mapBox.addEventListener("mouseover", (e) => {
+    if (!canHover) return;
+    const g = e.target.closest(".m-hall"); if (g) showCard(g.dataset.hall);
+  });
+  mapBox.addEventListener("mouseleave", () => { if (canHover) hideCard(); });
+  mapBox.addEventListener("click", (e) => {
+    const go = e.target.closest("[data-go]");
+    if (go) {
+      state.hall = go.dataset.go; lsSet(LS_HALL, state.hall);
+      mapDrawnFor = ""; hideCard(); render();
+      el.menu.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    const g = e.target.closest(".m-hall");
+    if (g) showCard(g.dataset.hall);
+    else if (!e.target.closest(".map-card")) hideCard();
+  });
+  mapBox.addEventListener("keydown", (e) => {
+    const g = e.target.closest(".m-hall");
+    if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); showCard(g.dataset.hall); }
+    if (e.key === "Escape") hideCard();
+  });
+  $("#mapBtn").addEventListener("click", () => setMapOpen(!state.mapOpen));
 
   // ---------- 事件 ----------
   el.halls.addEventListener("click", (e) => {
@@ -267,6 +414,7 @@
       return;
     }
     if (!state.halls.some((h) => h.slug === state.hall)) state.hall = state.halls[0] && state.halls[0].slug;
+    if (lsGet("uwdining.map")) setMapOpen(true);
     render();
   })();
 

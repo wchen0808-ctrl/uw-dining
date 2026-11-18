@@ -16,6 +16,12 @@
   --warn: #8a4b00;
   --head-text: #fff;
   --shadow: 0 1px 2px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.04);
+  --map-land: #f1ede6;
+  --map-water: #a9cfe6;
+  --map-water-text: #3d6f8f;
+  --map-green: #d5e6c4;
+  --map-road: #ffffff;
+  --map-path: #7aa86a;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -34,6 +40,12 @@
     --top9: #e0b850;
     --warn: #f0a860;
     --shadow: none;
+    --map-land: #24221f;
+    --map-water: #1f3a4d;
+    --map-water-text: #8fb8d4;
+    --map-green: #2c3a26;
+    --map-road: #3a3734;
+    --map-path: #6f9a60;
   }
 }
 * { box-sizing: border-box; }
@@ -94,6 +106,61 @@ h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: .02em; }
 }
 .meals button[aria-selected="true"] { color: #fff; font-weight: 700; border-bottom-color: #fff; }
 .meals button.empty { opacity: .45; }
+
+.title-btns { display: flex; gap: 6px; }
+.today-btn[aria-pressed="true"] { background: #fff; color: var(--red-dark); border-color: #fff; font-weight: 600; }
+
+/* ---------- 地图 ---------- */
+.map-panel { padding: 12px 16px 0; max-width: 760px; margin: 0 auto; }
+.map-panel[hidden] { display: none; }
+.map-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0 2px 8px; }
+.map-head span { font-weight: 700; }
+.map-head small { color: var(--muted); font-size: 12px; }
+.map-box {
+  position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--line);
+  background: var(--map-land); box-shadow: var(--shadow);
+}
+.map-box svg { display: block; width: 100%; height: auto; }
+.map-note { color: var(--muted); font-size: 11.5px; text-align: center; margin: 6px 0 0; }
+.m-lake { fill: var(--map-water); }
+.m-lake-label { fill: var(--map-water-text); font-size: 20px; font-style: italic; letter-spacing: .08em; }
+.m-green { fill: var(--map-green); }
+.m-road { fill: none; stroke: var(--map-road); stroke-linecap: round; stroke-linejoin: round; }
+.m-road.major { stroke-width: 7; }
+.m-road.minor { stroke-width: 4; }
+.m-path { fill: none; stroke: var(--map-path); stroke-width: 2; stroke-dasharray: 5 5; }
+.m-road-label { fill: var(--muted); font-size: 15px; }
+.m-landmark circle { fill: var(--muted); }
+.m-landmark text { fill: var(--muted); font-size: 14px; }
+.m-hall { cursor: pointer; outline: none; }
+.m-hall .pin { fill: var(--red); stroke: #fff; stroke-width: 2.5; transition: transform .15s; transform-box: fill-box; transform-origin: 50% 100%; }
+.m-hall .pin-dot { fill: #fff; pointer-events: none; }
+.m-hall text { font-size: 21px; font-weight: 700; fill: var(--text); paint-order: stroke; stroke: var(--map-land); stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }
+.m-hall.on .pin, .m-hall:hover .pin, .m-hall:focus-visible .pin { transform: scale(1.18); }
+.m-hall.current .pin { fill: var(--red-dark); }
+.map-card {
+  position: absolute; z-index: 2; width: min(260px, calc(100% - 16px));
+  background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.18); padding: 10px 12px 10px; font-size: 13.5px;
+}
+.map-card[hidden] { display: none; }
+.map-card h3 { margin: 0 0 2px; font-size: 15px; }
+.map-card .sub { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+.map-card ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }
+.map-card li b { font-weight: 600; }
+.map-card li small { display: block; color: var(--muted); font-size: 11.5px; }
+.map-card .none { color: var(--muted); }
+.map-card .go {
+  margin-top: 8px; width: 100%; border: 0; border-radius: 8px; padding: 7px 0;
+  background: var(--red); color: #fff; font-weight: 600; font-size: 13.5px;
+}
+
+@media (max-width: 599px) {
+  .map-card {
+    position: static; width: auto; border: 0; border-top: 1px solid var(--line);
+    border-radius: 0; box-shadow: none; padding: 10px 14px 12px;
+  }
+}
 
 /* ---------- 搜索与筛选 ---------- */
 .tools { padding: 12px 16px 4px; display: grid; gap: 10px; }
