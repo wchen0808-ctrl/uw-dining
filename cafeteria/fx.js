@@ -92,14 +92,22 @@
       animate(bubble.querySelectorAll("b, .chef-hall"), { opacity: [0, 1], y: [6, 0] }, { delay: stagger(0.08, { startDelay: 0.35 }), duration: 0.3 });
       const go = bubble.querySelector(".chef-go");
       if (go) animate(go, { scale: [1, 1.06, 1] }, { duration: 1.6, repeat: Infinity, repeatDelay: 1.4, delay: 1.2, ease: "easeInOut" });
-      const hat = pic.querySelector(".hat"), spoon = pic.querySelector(".spoon");
-      animate(pic.querySelector("svg"), { y: [0, -3, 0] }, { duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 0.8 });
-      if (hat) animate(hat, { rotate: [-3, 3, -3] }, { duration: 3, repeat: Infinity, ease: "easeInOut" });
-      if (spoon) animate(spoon, { rotate: [0, 16, 0] }, { duration: 1.2, repeat: Infinity, repeatDelay: 1.8, ease: "easeInOut" });
+      // 蛋形身体：呼吸一样的“压扁-拉长”，影子跟着变大变小
+      const img = pic.querySelector(".chef-img"), shadow = pic.querySelector(".chef-shadow");
+      if (img) animate(img, { scaleY: [1, 0.95, 1.03, 1], scaleX: [1, 1.04, 0.98, 1], y: [0, 0, -3, 0] },
+        { duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 0.9 });
+      if (shadow) animate(shadow, { scaleX: [1, 1.08, 0.88, 1], opacity: [1, 1, 0.75, 1] },
+        { duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 0.9 });
     }),
     // 点一下奶娃：原地跳起来转一圈
     chefJump: safe((pic) => {
-      animate(pic, { y: [0, -26, 0], rotate: [0, 360] }, { duration: 0.7, ease: [0.3, 1.4, 0.5, 1] });
+      const img = pic.querySelector(".chef-img"), shadow = pic.querySelector(".chef-shadow");
+      if (!img) return;
+      // 先蹲一下，弹起来转个身，落地再压扁
+      animate(img, { y: [0, 4, -34, 0, 0], scaleY: [1, 0.82, 1.1, 0.86, 1], scaleX: [1, 1.12, 0.94, 1.1, 1], rotate: [0, 0, -10, 6, 0] },
+        { duration: 0.8, times: [0, 0.15, 0.5, 0.8, 1], ease: "easeOut" });
+      if (shadow) animate(shadow, { scaleX: [1, 1.1, 0.5, 1.15, 1], opacity: [1, 1, 0.35, 1, 1] },
+        { duration: 0.8, times: [0, 0.15, 0.5, 0.8, 1] });
     }),
     chefOut: safe((box, done) => {
       animate(box, { opacity: 0, y: -10, scale: 0.96 }, { duration: 0.22 }).then(done);

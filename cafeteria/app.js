@@ -376,20 +376,8 @@
   syncHead(); window.addEventListener("resize", syncHead);
 
   // ---------- 奶娃大厨：按现在的时间推荐去哪吃 ----------
-  const CHEF_SVG = `<svg viewBox="0 0 100 112" aria-hidden="true">
-    <g class="hat">
-      <circle cx="30" cy="30" r="15"/><circle cx="50" cy="20" r="18"/><circle cx="70" cy="30" r="15"/>
-      <rect x="26" y="30" width="48" height="20" rx="4"/>
-    </g>
-    <rect class="band" x="24" y="44" width="52" height="9" rx="4.5"/>
-    <circle class="face" cx="50" cy="76" r="29"/>
-    <path class="curl" d="M47 49c-3-5 4-8 6-4"/>
-    <ellipse class="eye" cx="39" cy="74" rx="4" ry="5"/><ellipse class="eye" cx="61" cy="74" rx="4" ry="5"/>
-    <circle class="glint" cx="40.5" cy="72" r="1.5"/><circle class="glint" cx="62.5" cy="72" r="1.5"/>
-    <ellipse class="cheek" cx="31" cy="85" rx="6" ry="4"/><ellipse class="cheek" cx="69" cy="85" rx="6" ry="4"/>
-    <path class="mouth" d="M43 88q7 7 14 0"/>
-    <g class="spoon"><rect x="86" y="62" width="4" height="34" rx="2" transform="rotate(18 88 79)"/><ellipse cx="93" cy="58" rx="6" ry="8" transform="rotate(18 93 58)"/></g>
-  </svg>`;
+  const CHEF_SVG = `<span class="chef-shadow" aria-hidden="true"></span>
+    <img class="chef-img" src="icons/naiwa-chef.png" alt="奶娃大厨" width="320" height="430" decoding="async">`;
   const CHEF_HELLO = {
     breakfast: ["早上好呀！", "起床啦，吃早饭！", "早餐要吃饱哦～"],
     lunch: ["午饭时间到！", "肚子咕咕叫了吧？", "中午吃顿好的！"],

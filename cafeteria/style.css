@@ -125,18 +125,13 @@ h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: .02em; }
   max-width: 760px; margin: 12px auto 0; padding: 0 16px;
 }
 .chef[hidden] { display: none; }
-.chef-pic { flex: none; width: 76px; animation: chefHop .6s ease-out; transform-origin: 50% 100%; }
-.chef-pic svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chef-pic { position: relative; flex: none; width: 84px; padding-bottom: 6px; animation: chefHop .6s ease-out; transform-origin: 50% 100%; }
+.chef-img { position: relative; display: block; width: 100%; height: auto; transform-origin: 50% 100%; -webkit-user-drag: none; user-select: none; }
+.chef-shadow {
+  position: absolute; left: 14%; right: 14%; bottom: 0; height: 12px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0,0,0,.28), rgba(0,0,0,0)); transform-origin: 50% 50%;
+}
 .chef-pic:hover, .chef-pic:active { animation: chefWiggle .5s; }
-.chef .hat circle, .chef .hat rect { fill: #fff; stroke: var(--chef-line); stroke-width: 2; }
-.chef .band { fill: var(--red); }
-.chef .face { fill: #ffd8b5; stroke: var(--chef-line); stroke-width: 2; }
-.chef .curl { fill: none; stroke: #6b4a2e; stroke-width: 2.5; stroke-linecap: round; }
-.chef .eye { fill: #2b2220; }
-.chef .glint { fill: #fff; }
-.chef .cheek { fill: #ff9aa2; opacity: .75; }
-.chef .mouth { fill: none; stroke: #8a3b2e; stroke-width: 2.5; stroke-linecap: round; }
-.chef .spoon { fill: #b8b2aa; }
 .chef-bubble {
   position: relative; flex: 1; min-width: 0; background: var(--card); border: 1px solid var(--line);
   border-radius: 16px 16px 16px 4px; padding: 10px 30px 10px 12px; box-shadow: var(--shadow);
