@@ -71,6 +71,10 @@ python scripts/fetch_menus.py
 - **iPhone（Safari）**：打开网址 → 点底部分享按钮 → **添加到主屏幕**
 - **Android（Chrome）**：打开网址 → 右上角菜单 → **添加到主屏幕 / 安装应用**
 
+## 改了网页之后
+
+改了 `app.js` 或 `style.css` 后，把 `index.html` 里的 `?v=4` 和 `sw.js` 里的版本号一起加 1，否则手机可能继续用缓存里的旧文件。
+
 ## 测试
 
 ```bash
