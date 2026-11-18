@@ -9,6 +9,8 @@
 import datetime as dt
 import json
 import os
+import re
+import urllib.parse
 import sys
 import time
 import urllib.error
@@ -22,6 +24,70 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "cafeteria", "data")
 DIET_TAGS = {"Vegan", "Vegetarian", "Halal", "Top 9 Free"}
 DROP_TAGS = {"Disclaimer"}
+# 中文菜名：先查人工词典，查不到再机器翻译并缓存（只翻译一次）
+ZH_MANUAL = os.path.join(ROOT, "scripts", "zh_names.json")
+ZH_AUTO = os.path.join(ROOT, "scripts", "zh_names_auto.json")
+TRANSLATE_URL = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q="
+
+
+def clean_name(name):
+    """去掉 (VN)、(Veg)、- gcp、3 oz 之类的后缀，用于查词典和机器翻译。"""
+    s = re.sub(r"\((?:vn|veg|vegan|aycte|\d+)\)", " ", name, flags=re.I)
+    s = re.sub(r"\s-\s*(?:gcp|um|ur)\b", " ", s, flags=re.I)
+    s = re.sub(r"\b\d+(?:\.\d+)?\s*oz\b", " ", s, flags=re.I)
+    s = re.sub(r"\s+", " ", s).strip(" -")
+    return s
+
+
+def norm_key(name):
+    return clean_name(name).lower()
+
+
+def load_json(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+class Translator:
+    def __init__(self):
+        self.manual = {norm_key(k): v for k, v in load_json(ZH_MANUAL).items()}
+        self.auto = load_json(ZH_AUTO)
+        self.auto_dirty = False
+        self.failures = 0
+
+    def zh(self, name):
+        key = norm_key(name)
+        if key in self.manual:
+            return self.manual[key]
+        if key in self.auto:
+            return self.auto[key]
+        if self.failures >= 3:  # 翻译服务不可用时就别再试了
+            return None
+        text = clean_name(name)
+        try:
+            req = urllib.request.Request(TRANSLATE_URL + urllib.parse.quote(text),
+                                         headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                data = json.load(r)
+            out = "".join(seg[0] for seg in data[0] if seg and seg[0]).strip()
+        except Exception as e:  # noqa: BLE001
+            self.failures += 1
+            print(f"  ! 翻译失败 {text}: {e}", file=sys.stderr)
+            return None
+        if out and out.lower() != text.lower():
+            self.auto[key] = out
+            self.auto_dirty = True
+            return out
+        return None
+
+    def save(self):
+        if self.auto_dirty:
+            with open(ZH_AUTO, "w", encoding="utf-8", newline="\n") as f:
+                json.dump(dict(sorted(self.auto.items())), f, ensure_ascii=False, indent=1)
+                f.write("\n")
 
 
 def madison_today():
@@ -60,7 +126,7 @@ def get_json(path, retries=3):
             time.sleep(2 * (attempt + 1))
 
 
-def parse_day(day):
+def parse_day(day, tr):
     """把一天的 menu_items 按窗口分组。窗口名来自 menu_info[menu_id]。"""
     info = day.get("menu_info") or {}
     stations = {}
@@ -85,6 +151,9 @@ def parse_day(day):
         if any(x["n"] == name for x in st["items"]):
             continue
         entry = {"n": name}
+        zh = tr.zh(name)
+        if zh:
+            entry["zh"] = zh
         if cal is not None:
             entry["cal"] = round(cal)
         diet = [i for i in icons if i in DIET_TAGS]
@@ -138,6 +207,7 @@ def main():
     # 一周接口按周返回，覆盖 14 天只需要请求每个周起点
     week_starts = sorted({d - dt.timedelta(days=(d.weekday() + 1) % 7) for d in dates})
     days = {d: {} for d in wanted}
+    tr = Translator()
     ok = 0
     for h in halls:
         for meal in MEALS:
@@ -149,13 +219,14 @@ def main():
                 for day in data.get("days") or []:
                     if day.get("date") not in wanted:
                         continue
-                    stations = parse_day(day)
+                    stations = parse_day(day, tr)
                     if stations:
                         days[day["date"]].setdefault(h["slug"], {})[meal] = stations
     if ok == 0:
         print("所有请求都失败了，不改写任何文件", file=sys.stderr)
         return 1
 
+    tr.save()
     changed = write_if_changed(os.path.join(OUT, "halls.json"),
                                {"halls": halls, "range": [min(wanted), max(wanted)]})
     for date in sorted(wanted):

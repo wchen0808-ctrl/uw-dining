@@ -127,7 +127,8 @@
       .map((t) => `<span class="tag ${DIET[t].cls}">${DIET[t].zh}</span>`).join("");
     const alg = allergenText(it);
     return `<div class="item">
-      <div class="row"><span class="name">${esc(it.n)}</span>${it.cal != null ? `<span class="cal">${it.cal} 千卡</span>` : ""}</div>
+      <div class="row"><span class="name">${esc(it.zh || it.n)}</span>${it.cal != null ? `<span class="cal">${it.cal} 千卡</span>` : ""}</div>
+      ${it.zh ? `<div class="en" lang="en">${esc(it.n)}</div>` : ""}
       ${where ? `<div class="where">${esc(where)}</div>` : ""}
       ${tags ? `<div class="tags">${tags}</div>` : ""}
       ${alg ? `<div class="alg">${esc(alg)}</div>` : ""}
@@ -165,7 +166,7 @@
     for (const h of state.halls) {
       const hd = day.halls[h.slug] || {};
       for (const meal of MEALS) for (const st of hd[meal] || []) for (const it of st.items) {
-        if (it.n.toLowerCase().includes(q) && passes(it)) {
+        if ((it.n.toLowerCase().includes(q) || (it.zh || "").includes(state.q)) && passes(it)) {
           results.push({ it, where: `${shortHall(h.name)} · ${MEAL_ZH[meal]} · ${st.name}` });
         }
       }
@@ -174,7 +175,7 @@
     el.menu.innerHTML = `<p class="summary">${d.getMonth() + 1}月${d.getDate()}日 所有食堂中搜索“${esc(state.q)}”：${results.length} 个结果</p>` +
       (results.length
         ? `<section class="station">${results.map((r) => itemHTML(r.it, r.where)).join("")}</section>`
-        : emptyHTML("🔍", "没有找到，试试英文关键词，例如 chicken、tofu、pizza"));
+        : emptyHTML("🔍", "没有找到，换个关键词试试，例如 鸡肉、豆腐、pizza"));
   }
 
   let renderToken = 0;

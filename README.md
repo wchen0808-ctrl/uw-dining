@@ -7,6 +7,7 @@
 - 打开默认显示今天，按当前时间自动选早餐 / 午餐 / 晚餐（10:30 前早餐，14:30 前午餐，之后晚餐）
 - 顶部日期条可以翻到未来两周；在菜单区域左右滑动换一天
 - 切换食堂，自动记住上次选的（localStorage）
+- 菜名中英文对照（中文在上，英文原名在下），搜索支持中英文
 - 每道菜显示所在窗口、热量、素食 / 纯素 / 清真标签和中文过敏原（例如：含：小麦、大豆）
 - 筛选：素食、纯素、清真、无常见过敏原（Top 9 Free）
 - 搜索当天所有食堂的菜，结果显示“食堂 · 餐次 · 窗口”
@@ -36,6 +37,7 @@ tests/iphone.test.cjs          Playwright iPhone 尺寸测试
 - 窗口名取自 `day.menu_info[menu_id].section_options.display_name`，按 `position` 排序（不用 `is_section_title`，那些几乎都叫 “Build Your Own”）
 - 菜名 `food.name`，标签 `food.icons.food_icons[].name`（丢掉 `Disclaimer`），热量 `food.rounded_nutrition_info.calories`
 - 名字里带 `OrderIt` 的条目会被过滤掉
+- 中文菜名先查人工词典 `scripts/zh_names.json`；查不到的新菜名会自动机器翻译，并缓存到 `scripts/zh_names_auto.json`（翻译失败就只显示英文）。想改某个译名，直接编辑 `zh_names.json`
 - 文件内容没变就不改写，避免空提交
 
 在本地手动更新数据：

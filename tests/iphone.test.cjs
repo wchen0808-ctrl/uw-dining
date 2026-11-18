@@ -97,11 +97,11 @@ async function run(browserType, deviceName, scheme) {
   await page.click("#todayBtn");
 
   // 搜索
-  await page.fill("#q", "chicken");
+  await page.fill("#q", "鸡肉");
   await page.waitForTimeout(400);
   const n = await page.locator(".item .where").count();
   const where = n ? await page.locator(".item .where").first().innerText() : "";
-  check(n > 0 && where.split(" · ").length === 3, `搜索 chicken：${n} 个结果，例如“${where}”`);
+  check(n > 0 && where.split(" · ").length === 3, `搜索 鸡肉：${n} 个结果，例如“${where}”`);
   await page.screenshot({ path: path.join(SHOTS, `${tag}-3-search.png`) });
   await page.click("#clearQ");
 
