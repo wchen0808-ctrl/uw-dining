@@ -25,12 +25,14 @@
   };
   const LS_HALL = "uwdining.hall";
   const LS_FILTERS = "uwdining.filters";
+  const ARROW = `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5l5 5-5 5"/></svg>`;
 
   const $ = (s) => document.querySelector(s);
   const el = {
     halls: $("#halls"), dates: $("#dates"), meals: $("#meals"), menu: $("#menu"),
     prev: $("#prevWeek"), next: $("#nextWeek"), today: $("#todayBtn"),
     q: $("#q"), clearQ: $("#clearQ"), filters: $("#filters"), toast: $("#toast"),
+    menuTitle: $("#menuTitle"), menuMeta: $("#menuMeta"), chef: $("#chef"), rank: $("#rank"),
   };
 
   function has(it, tag) { return (it.d || []).includes(tag); }
@@ -39,9 +41,8 @@
   }
   function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch { /* 隐私模式 */ } }
-  function iso(d) {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }
+  const pad = (n) => String(n).padStart(2, "0");
+  function iso(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
   function parseIso(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
   function addDays(s, n) { const d = parseIso(s); d.setDate(d.getDate() + n); return iso(d); }
   function mealForNow(now = new Date()) {
@@ -50,7 +51,7 @@
     if (m < 14 * 60 + 30) return "lunch";
     return "dinner";
   }
-  function shortHall(name) { return name.replace(/\s*Market$/i, ""); }
+  function shortHall(name) { return name.replace(/\s*Market$/i, "").replace(/\s*Avenue$/i, ""); }
   function noteZh(note) {
     const m = /Available Between\s+(\S+)\s*-\s*(\S+)/i.exec(note || "");
     return m ? `供应时间 ${m[1]}–${m[2]}` : note || "";
@@ -59,19 +60,28 @@
     const a = (it.a || []).map((x) => ALLERGEN_ZH[x] || x);
     return a.length ? `含：${[...new Set(a)].join("、")}` : "";
   }
+  function dayLabel(date) {
+    const d = parseIso(date);
+    return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${WEEK_ZH[d.getDay()]}`;
+  }
+  const calHTML = (it) => it.cal != null
+    ? `<span class="cal"><span class="num">${it.cal}</span> <span class="unit">千卡</span></span>` : "";
 
   const todayIso = iso(new Date());
   const DAYS = 14;
   const state = {
     halls: [],
+    codes: {},
     hall: lsGet(LS_HALL),
     date: todayIso,
     meal: mealForNow(),
     filters: new Set((lsGet(LS_FILTERS) || "").split(",").filter((f) => FILTERS[f])),
     q: "",
+    best: null,
     cache: new Map(),
   };
   const dateList = Array.from({ length: DAYS }, (_, i) => addDays(todayIso, i));
+  const hallBy = (slug) => state.halls.find((h) => h.slug === slug);
 
   async function loadJSON(url) {
     const r = await fetch(url, { cache: "no-cache" });
@@ -79,31 +89,24 @@
     return r.json();
   }
   function loadDay(date) {
-    if (!state.cache.has(date)) {
-      const p = loadJSON(`data/${date}.json`).catch(() => null);
-      state.cache.set(date, p);
-    }
+    if (!state.cache.has(date)) state.cache.set(date, loadJSON(`data/${date}.json`).catch(() => null));
     return state.cache.get(date);
   }
 
-  // ---------- 渲染顶部 ----------
+  // ---------- 顶部 ----------
   function renderHalls() {
     el.halls.innerHTML = state.halls.map((h) =>
-      `<button type="button" data-hall="${esc(h.slug)}" aria-pressed="${h.slug === state.hall}">${esc(shortHall(h.name))}</button>`
+      `<button type="button" data-hall="${esc(h.slug)}" aria-pressed="${h.slug === state.hall}"><span class="code">${state.codes[h.slug]}</span>${esc(shortHall(h.name))}</button>`
     ).join("");
-    const on = el.halls.querySelector('[aria-pressed="true"]');
-    if (on) on.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
   function weekIndex() { return Math.floor(dateList.indexOf(state.date) / 7); }
   function renderDates() {
     const w = Math.max(0, weekIndex());
-    const slice = dateList.slice(w * 7, w * 7 + 7);
-    el.dates.innerHTML = slice.map((d) => {
+    el.dates.innerHTML = dateList.slice(w * 7, w * 7 + 7).map((d) => {
       const dt = parseIso(d);
-      const label = d === todayIso ? "今天" : WEEK_ZH[dt.getDay()];
       return `<button type="button" role="tab" data-date="${d}" aria-selected="${d === state.date}"
         class="${d === todayIso ? "is-today" : ""}" aria-label="${dt.getMonth() + 1}月${dt.getDate()}日 ${WEEK_ZH[dt.getDay()]}">
-        <span class="dw">${label}</span><span class="dd">${dt.getDate()}</span></button>`;
+        <span class="dw">${d === todayIso ? "今天" : WEEK_ZH[dt.getDay()]}</span><span class="dd">${dt.getDate()}</span></button>`;
     }).join("");
     el.prev.disabled = w === 0;
     el.next.disabled = w >= Math.ceil(DAYS / 7) - 1;
@@ -123,7 +126,7 @@
     el.filters.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", state.filters.has(b.dataset.f)));
   }
 
-  // ---------- 渲染菜品 ----------
+  // ---------- 菜单小票 ----------
   function passes(it) { for (const f of state.filters) if (!FILTERS[f](it)) return false; return true; }
   function itemHTML(it, where) {
     const tags = ["Vegan", "Vegetarian", "Halal", "Top 9 Free"]
@@ -131,40 +134,44 @@
       .map((t) => `<span class="tag ${DIET[t].cls}">${DIET[t].zh}</span>`).join("");
     const alg = allergenText(it);
     return `<div class="item">
-      <div class="row"><span class="name">${esc(it.zh || it.n)}</span>${it.cal != null ? `<span class="cal">${it.cal} 千卡</span>` : ""}</div>
+      <div class="line"><span class="name">${esc(it.zh || it.n)}</span><span class="lead"></span>${calHTML(it)}</div>
       ${it.zh ? `<div class="en" lang="en">${esc(it.n)}</div>` : ""}
       ${where ? `<div class="where">${esc(where)}</div>` : ""}
       ${tags ? `<div class="tags">${tags}</div>` : ""}
       ${alg ? `<div class="alg">${esc(alg)}</div>` : ""}
     </div>`;
   }
-  function emptyHTML(icon, text) { return `<div class="empty-state"><div class="big">${icon}</div>${esc(text)}</div>`; }
+  function emptyHTML(title, small) {
+    return `<div class="empty-state"><p class="big">${esc(title)}</p>${small ? `<p class="small">${esc(small)}</p>` : ""}</div>`;
+  }
 
   function renderMenu(day) {
     if (state.q) return renderSearch(day);
-    if (!day) return void (el.menu.innerHTML = emptyHTML("📭", "暂时没有这一天的菜单数据"));
+    const h = hallBy(state.hall);
+    el.menuTitle.textContent = h ? `${h.name} 菜单` : "菜单";
+    const meta = `${state.codes[state.hall] || ""} · ${dayLabel(state.date)} · ${MEAL_ZH[state.meal]}`;
+    if (!day) { el.menuMeta.textContent = meta; return void (el.menu.innerHTML = emptyHTML("这一天还没有菜单", "菜单通常提前一两周公布，过几天再来看看")); }
     const stations = ((day.halls[state.hall] || {})[state.meal]) || [];
-    const hallName = (state.halls.find((h) => h.slug === state.hall) || {}).name || "";
     if (!stations.length) {
-      return void (el.menu.innerHTML = emptyHTML("🍽️", `${hallName} 这一天没有${MEAL_ZH[state.meal]}`));
+      el.menuMeta.textContent = meta;
+      return void (el.menu.innerHTML = emptyHTML(`这一天没有${MEAL_ZH[state.meal]}`, "换个餐次，或者看看其他食堂"));
     }
     let total = 0, shown = 0;
     const html = stations.map((st) => {
       const items = st.items.filter(passes);
       total += st.items.length; shown += items.length;
       if (!items.length) return "";
-      return `<section class="station"><h2>${esc(st.name)}${st.note ? `<small>${esc(noteZh(st.note))}</small>` : ""}</h2>
+      return `<section class="station"><h3>${esc(st.name)}</h3>${st.note ? `<p class="note">${esc(noteZh(st.note))}</p>` : ""}
         ${items.map((it) => itemHTML(it)).join("")}</section>`;
     }).join("");
-    const d = parseIso(state.date);
-    const sum = `<p class="summary">${d.getMonth() + 1}月${d.getDate()}日 ${WEEK_ZH[d.getDay()]} · ${esc(hallName)} · ${MEAL_ZH[state.meal]} · ${
-      state.filters.size ? `筛选后 ${shown} / ${total} 道菜` : `${total} 道菜`}</p>`;
-    el.menu.innerHTML = sum + (shown ? html : emptyHTML("🔍", "没有符合筛选条件的菜")) +
-      `<p class="hint">在菜单区域左右滑动可以切换日期</p>`;
+    el.menuMeta.textContent = `${meta} · ${state.filters.size ? `筛选后 ${shown}/${total}` : total} 道菜`;
+    el.menu.innerHTML = (shown ? html : emptyHTML("没有符合筛选的菜", "把上面的筛选关掉几个试试")) +
+      `<p class="hint">左右滑动换一天</p>`;
   }
 
   function renderSearch(day) {
-    if (!day) return void (el.menu.innerHTML = emptyHTML("📭", "暂时没有这一天的菜单数据"));
+    el.menuTitle.textContent = `搜“${state.q}”`;
+    if (!day) { el.menuMeta.textContent = dayLabel(state.date); return void (el.menu.innerHTML = emptyHTML("这一天还没有菜单")); }
     const q = state.q.toLowerCase();
     const results = [];
     for (const h of state.halls) {
@@ -175,11 +182,10 @@
         }
       }
     }
-    const d = parseIso(state.date);
-    el.menu.innerHTML = `<p class="summary">${d.getMonth() + 1}月${d.getDate()}日 所有食堂中搜索“${esc(state.q)}”：${results.length} 个结果</p>` +
-      (results.length
-        ? `<section class="station">${results.map((r) => itemHTML(r.it, r.where)).join("")}</section>`
-        : emptyHTML("🔍", "没有找到，换个关键词试试，例如 鸡肉、豆腐、pizza"));
+    el.menuMeta.textContent = `${dayLabel(state.date)} · 所有食堂 · ${results.length} 个结果`;
+    el.menu.innerHTML = results.length
+      ? `<section class="station">${results.map((r) => itemHTML(r.it, r.where)).join("")}</section>`
+      : emptyHTML("没有找到", "换个关键词试试，比如 鸡肉、豆腐、pizza");
   }
 
   let renderToken = 0;
@@ -190,8 +196,8 @@
     if (token !== renderToken) return;
     renderMeals(day);
     renderMenu(day);
+    await renderChef();
     if (state.mapOpen) renderMap(day);
-    renderChef();
     if (document.documentElement.classList.contains("has-motion")) {
       FX.menuIn(el.menu, anim === "slide-l" ? 1 : anim === "slide-r" ? -1 : 0);
     } else if (anim) {
@@ -199,7 +205,6 @@
       void el.menu.offsetWidth;
       el.menu.classList.add(anim);
     }
-    // 预取相邻日期
     const i = dateList.indexOf(state.date);
     [dateList[i - 1], dateList[i + 1]].forEach((d) => d && loadDay(d));
   }
@@ -211,66 +216,15 @@
   function shiftDay(n) {
     const i = dateList.indexOf(state.date) + n;
     if (i < 0) return toast("已经是今天了");
-    if (i >= dateList.length) return toast("只能查看未来两周的菜单");
+    if (i >= dateList.length) return toast("只能看未来两周的菜单");
     state.date = dateList[i];
     render(n > 0 ? "slide-l" : "slide-r");
   }
-
-  // ---------- 地图 ----------
-  // 用经纬度直接投影到 SVG 上（这一小片校园可以当成平面）
-  const BOUNDS = { w: -89.4205, e: -89.3945, n: 43.0815, s: 43.0695 };
-  const MAP_W = 600, MAP_H = Math.round(MAP_W * ((BOUNDS.n - BOUNDS.s) * 111) / ((BOUNDS.e - BOUNDS.w) * 111 * Math.cos(43.075 * Math.PI / 180)));
-  const P = (lat, lng) => [
-    +((lng - BOUNDS.w) / (BOUNDS.e - BOUNDS.w) * MAP_W).toFixed(1),
-    +((BOUNDS.n - lat) / (BOUNDS.n - BOUNDS.s) * MAP_H).toFixed(1),
-  ];
-  const line = (pts) => pts.map((p, i) => (i ? "L" : "M") + P(...p).join(",")).join(" ");
-  const SHORE = [[43.0796, -89.4205], [43.0793, -89.4178], [43.0789, -89.4140], [43.0791, -89.4112], [43.0788, -89.4085],
-    [43.0786, -89.4068], [43.0780, -89.4040], [43.0774, -89.4012], [43.0772, -89.3995], [43.0769, -89.3970], [43.0768, -89.3945]];
-  const ROADS = [
-    { name: "University Ave", cls: "major", pts: [[43.0731, -89.3945], [43.0731, -89.4080], [43.0738, -89.4130], [43.0745, -89.4205]], label: [43.0727, -89.4110] },
-    { name: "Johnson St", cls: "major", pts: [[43.0719, -89.3945], [43.0719, -89.4060]], label: [43.0715, -89.4045] },
-    { name: "Park St", cls: "minor", pts: [[43.0773, -89.4003], [43.0695, -89.4003]], label: null },
-    { name: "Dayton St", cls: "minor", pts: [[43.0709, -89.3945], [43.0709, -89.4003]], label: [43.0705, -89.3965] },
-    { name: "Observatory Dr", cls: "minor", pts: [[43.0757, -89.4003], [43.0760, -89.4035], [43.0770, -89.4060], [43.0768, -89.4095], [43.0763, -89.4135], [43.0766, -89.4180]], label: [43.0758, -89.4125] },
-    { name: "Elm Dr", cls: "minor", pts: [[43.0790, -89.4188], [43.0735, -89.4192]], label: null },
-    { name: "Babcock Dr", cls: "minor", pts: [[43.0766, -89.4140], [43.0731, -89.4142]], label: null },
-  ];
-  const LANDMARKS = [
-    { name: "Bascom Hall", at: [43.0753, -89.4041] },
-    { name: "Memorial Union", at: [43.0768, -89.3998] },
-  ];
-
-  function mapSVG() {
-    const shore = SHORE.map((p) => P(...p));
-    const lake = `M0,0 L${MAP_W},0 L${shore[shore.length - 1].join(",")} ` +
-      shore.slice().reverse().map((p) => "L" + p.join(",")).join(" ") + " Z";
-    const path = line(SHORE.map(([a, b]) => [a - 0.00035, b]));
-    const [bx1, by1] = P(43.0760, -89.4045), [bx2, by2] = P(43.0748, -89.4008);
-    const halls = state.halls.filter((h) => h.lat).map((h) => {
-      const [x, y] = P(h.lat, h.lng);
-      const below = y < 80; // 太靠湖边的标签放到下面
-      return `<g class="m-hall${h.slug === state.hall ? " current" : ""}" data-hall="${esc(h.slug)}" tabindex="0" role="button"
-          aria-label="${esc(h.name)}，查看今日硬菜" transform="translate(${x},${y})">
-        <circle cy="-24" r="30" fill="transparent"/>
-        <g class="pin-g"><path class="pin" d="M0,0 C-6,-11 -16,-17 -16,-29 A16,16 0 1 1 16,-29 C16,-17 6,-11 0,0 Z"/>
-        <circle class="pin-dot" cy="-29" r="6"/></g>
-        <text y="${below ? 24 : -52}" text-anchor="middle">${esc(shortHall(h.name).replace(/\s*Avenue$/, ""))}</text>
-      </g>`;
-    }).join("");
-    return `<svg viewBox="0 0 ${MAP_W} ${MAP_H}" role="img" aria-label="UW–Madison 校园食堂位置示意图">
-      <path class="m-lake" d="${lake}"/>
-      <text class="m-lake-label" x="${MAP_W / 2}" y="30" text-anchor="middle">Lake Mendota 门多塔湖</text>
-      <rect class="m-green" x="${bx1}" y="${by1}" width="${bx2 - bx1}" height="${by2 - by1}" rx="6"/>
-      ${ROADS.map((r) => `<path class="m-road ${r.cls}" d="${line(r.pts)}"/>`).join("")}
-      <path class="m-path" d="${path}"/>
-      ${ROADS.filter((r) => r.label).map((r) => { const [x, y] = P(...r.label); return `<text class="m-road-label" x="${x}" y="${y}" text-anchor="middle">${r.name}</text>`; }).join("")}
-      ${(() => { const [x, y] = P(43.0745, -89.4003); return `<text class="m-road-label" x="${x + 5}" y="${y}" transform="rotate(90 ${x + 5} ${y})">Park St</text>`; })()}
-      ${LANDMARKS.map((l) => { const [x, y] = P(...l.at); return `<g class="m-landmark"><circle cx="${x}" cy="${y}" r="3"/><text x="${x}" y="${y + 18}" text-anchor="middle">${l.name}</text></g>`; }).join("")}
-      ${halls}
-    </svg><div id="mapCard" class="map-card" hidden></div>`;
+  function goToMenu() {
+    requestAnimationFrame(() => $(".receipt").scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
+  // ---------- 硬菜 ----------
   const MEAT = /\b(beef|chicken|pork|salmon|shrimp|cod|tilapia|brisket|lamb|turkey|steak|ribs?|fish|mahi|haddock|ham|sausage|kielbasa|meatballs?|gyro|barbacoa|carnitas?|birria|bulgogi|burnt ends|meatloaf|wings?|drumsticks?|tenders)\b/i;
   const NOT_MAIN = /\b(gravy|sauce|egg|eggs|scrambled|pancakes?|popcake|waffle|french toast|salad filling|oatmeal|grits|condiment)\b/i;
   const NOT_MAIN_BREAKFAST = /\b(gravy|sauce|condiment|syrup)\b/i;
@@ -290,43 +244,102 @@
     return best.sort((a, b) => b.score - a.score).slice(0, n);
   }
 
+  // ---------- 地图 ----------
+  // 用经纬度直接投影到 SVG 上（这一小片校园可以当成平面）
+  const BOUNDS = { w: -89.4205, e: -89.3945, n: 43.0815, s: 43.0695 };
+  const MAP_W = 600, MAP_H = Math.round(MAP_W * ((BOUNDS.n - BOUNDS.s) * 111) / ((BOUNDS.e - BOUNDS.w) * 111 * Math.cos(43.075 * Math.PI / 180)));
+  const P = (lat, lng) => [
+    +((lng - BOUNDS.w) / (BOUNDS.e - BOUNDS.w) * MAP_W).toFixed(1),
+    +((BOUNDS.n - lat) / (BOUNDS.n - BOUNDS.s) * MAP_H).toFixed(1),
+  ];
+  const line = (pts) => pts.map((p, i) => (i ? "L" : "M") + P(...p).join(",")).join(" ");
+  const SHORE = [[43.0796, -89.4205], [43.0793, -89.4178], [43.0789, -89.4140], [43.0791, -89.4112], [43.0788, -89.4085],
+    [43.0786, -89.4068], [43.0780, -89.4040], [43.0774, -89.4012], [43.0772, -89.3995], [43.0769, -89.3970], [43.0768, -89.3945]];
+  const ROADS = [
+    { name: "University Ave", cls: "major", pts: [[43.0731, -89.3945], [43.0731, -89.4080], [43.0738, -89.4130], [43.0745, -89.4205]], label: [43.0726, -89.4110] },
+    { name: "Johnson St", cls: "major", pts: [[43.0719, -89.3945], [43.0719, -89.4060]], label: [43.0714, -89.4045] },
+    { name: "Park St", cls: "minor", pts: [[43.0773, -89.4003], [43.0695, -89.4003]], label: null },
+    { name: "Dayton St", cls: "minor", pts: [[43.0709, -89.3945], [43.0709, -89.4003]], label: [43.0704, -89.3965] },
+    { name: "Observatory Dr", cls: "minor", pts: [[43.0757, -89.4003], [43.0760, -89.4035], [43.0770, -89.4060], [43.0768, -89.4095], [43.0763, -89.4135], [43.0766, -89.4180]], label: [43.0757, -89.4125] },
+    { name: "Elm Dr", cls: "minor", pts: [[43.0790, -89.4188], [43.0735, -89.4192]], label: null },
+    { name: "Babcock Dr", cls: "minor", pts: [[43.0766, -89.4140], [43.0731, -89.4142]], label: null },
+  ];
+  const LANDMARKS = [
+    { name: "Bascom Hall", at: [43.0753, -89.4041], anchor: "end" },
+    { name: "Memorial Union", at: [43.0768, -89.3998] },
+  ];
+
+  function mapSVG() {
+    const shore = SHORE.map((p) => P(...p));
+    const lake = `M0,0 L${MAP_W},0 L${shore[shore.length - 1].join(",")} ` +
+      shore.slice().reverse().map((p) => "L" + p.join(",")).join(" ") + " Z";
+    const path = line(SHORE.map(([a, b]) => [a - 0.00035, b]));
+    const [bx1, by1] = P(43.0760, -89.4045), [bx2, by2] = P(43.0748, -89.4008);
+    const halls = state.halls.filter((h) => h.lat).map((h) => {
+      const [x, y] = P(h.lat, h.lng);
+      const below = y < 90; // 太靠湖边的名字放到下面
+      const cls = ["m-hall", h.slug === state.hall ? "current" : "", h.slug === state.best ? "best" : ""].join(" ").trim();
+      return `<g class="${cls}" data-hall="${esc(h.slug)}" tabindex="0" role="button"
+          aria-label="${state.codes[h.slug]} ${esc(h.name)}，查看硬菜" transform="translate(${x},${y})">
+        <circle cy="-26" r="32" fill="transparent"/>
+        <g class="pin-g"><rect class="pin" x="-24" y="-46" width="48" height="32" rx="2"/>
+          <path class="pin-tail" d="M-7 -14.5 L0 -5 L7 -14.5Z"/>
+          <text class="pin-code" y="-24" text-anchor="middle">${state.codes[h.slug]}</text></g>
+        <text class="m-name" y="${below ? 20 : -56}" text-anchor="middle">${esc(shortHall(h.name))}</text>
+      </g>`;
+    }).join("");
+    return `<svg viewBox="0 0 ${MAP_W} ${MAP_H}" role="img" aria-label="UW–Madison 校园食堂位置示意图">
+      <path class="m-lake" d="${lake}"/>
+      <text class="m-lake-label" x="${MAP_W / 2}" y="30" text-anchor="middle">Lake Mendota 门多塔湖</text>
+      <rect class="m-green" x="${bx1}" y="${by1}" width="${bx2 - bx1}" height="${by2 - by1}"/>
+      ${ROADS.map((r) => `<path class="m-road ${r.cls}" d="${line(r.pts)}"/>`).join("")}
+      <path class="m-path" d="${path}"/>
+      ${ROADS.filter((r) => r.label).map((r) => { const [x, y] = P(...r.label); return `<text class="m-road-label" x="${x}" y="${y}" text-anchor="middle">${r.name}</text>`; }).join("")}
+      ${(() => { const [x, y] = P(43.0705, -89.4003); return `<text class="m-road-label" x="${x - 8}" y="${y}" text-anchor="end">Park St</text>`; })()}
+      ${LANDMARKS.map((l) => { const [x, y] = P(...l.at); return l.anchor === "end"
+        ? `<g class="m-landmark"><circle cx="${x}" cy="${y}" r="3"/><text x="${x - 8}" y="${y + 5}" text-anchor="end">${l.name}</text></g>`
+        : `<g class="m-landmark"><circle cx="${x}" cy="${y}" r="3"/><text x="${x}" y="${y + 18}" text-anchor="middle">${l.name}</text></g>`; }).join("")}
+      ${halls}
+    </svg><div id="mapCard" class="map-card" hidden></div>`;
+  }
+
   const canHover = window.matchMedia("(hover: hover)").matches;
   let mapDay = null, mapDrawnFor = "";
   function renderMap(day) {
     mapDay = day;
     const box = $("#mapBox");
-    const key = state.halls.map((h) => h.slug).join() + "|" + state.hall;
+    const key = state.halls.map((h) => h.slug).join() + "|" + state.hall + "|" + state.best;
     if (mapDrawnFor !== key) { box.innerHTML = mapSVG(); mapDrawnFor = key; }
-    const d = parseIso(state.date);
-    $("#mapTitle").textContent = `${state.date === todayIso ? "今天" : `${d.getMonth() + 1}月${d.getDate()}日`}${MEAL_ZH[state.meal]} · 食堂地图`;
+    $("#mapTitle").textContent = `${state.date === todayIso ? "今天" : dayLabel(state.date)}${MEAL_ZH[state.meal]} · 食堂地图`;
     $("#mapHint").textContent = canHover ? "鼠标悬停看硬菜" : "点食堂看硬菜";
     const card = $("#mapCard");
     if (!card.hidden && card.dataset.hall) showCard(card.dataset.hall);
   }
   function showCard(slug) {
     const box = $("#mapBox"), card = $("#mapCard");
-    const h = state.halls.find((x) => x.slug === slug);
+    const h = hallBy(slug);
     if (!h) return;
     const list = hardDishes(slug, mapDay, state.meal);
     const fresh = card.hidden || card.dataset.hall !== slug;
     card.dataset.hall = slug;
-    card.innerHTML = `<h3>${esc(h.name)}</h3>
+    card.innerHTML = `<h3>${state.codes[slug]} ${esc(h.name)}</h3>
       <div class="sub">${MEAL_ZH[state.meal]}硬菜${h.addr ? " · " + esc(h.addr.split(",")[0]) : ""}</div>
-      ${list.length ? `<ol>${list.map(({ it, st }) => `<li><b>${esc(it.zh || it.n)}</b>${it.cal != null ? ` <span class="cal">${it.cal} 千卡</span>` : ""}<small>${esc(st)}${it.zh ? " · " + esc(it.n) : ""}</small></li>`).join("")}</ol>`
-        : `<div class="none">${mapDay ? `这一餐没有菜单` : "暂无数据"}</div>`}
-      <button type="button" class="go" data-go="${esc(slug)}">看 ${esc(shortHall(h.name))} 完整菜单 →</button>`;
+      ${list.length ? `<ol>${list.map(({ it, st }) => `<li><div class="line"><b>${esc(it.zh || it.n)}</b><span class="lead"></span>${calHTML(it)}</div><small>${esc(st)}${it.zh ? " · " + esc(it.n) : ""}</small></li>`).join("")}</ol>`
+        : `<div class="none">${mapDay ? "这一餐没有菜单" : "暂无数据"}</div>`}
+      <button type="button" class="go" data-go="${esc(slug)}">看 ${esc(shortHall(h.name))} 完整菜单</button>`;
     card.hidden = false;
     if (fresh) FX.cardIn(card);
     box.querySelectorAll(".m-hall").forEach((g) => g.classList.toggle("on", g.dataset.hall === slug));
-    // 窄屏：卡片排在地图下面；宽屏：浮在图钉旁边，不出界
+    // 地图窄（手机、电脑左栏）：卡片排在地图下面；地图够宽：浮在图钉旁边，不出界
+    box.classList.toggle("narrow", box.clientWidth < 560);
     if (getComputedStyle(card).position === "static") return;
     const g = box.querySelector(`.m-hall[data-hall="${CSS.escape(slug)}"]`);
     const br = box.getBoundingClientRect(), pr = g.querySelector(".pin").getBoundingClientRect();
     const cw = card.offsetWidth, ch = card.offsetHeight;
     let left = pr.left - br.left + pr.width / 2 - cw / 2;
     left = Math.max(8, Math.min(left, br.width - cw - 8));
-    let top = pr.bottom - br.top + 6;
-    if (top + ch > br.height - 4) top = Math.max(4, pr.top - br.top - ch - 6);
+    let top = pr.bottom - br.top + 10;
+    if (top + ch > br.height - 4) top = Math.max(4, pr.top - br.top - ch - 8);
     card.style.left = left + "px"; card.style.top = top + "px";
   }
   function hideCard() {
@@ -341,6 +354,11 @@
     lsSet("uwdining.map", open ? "1" : "");
     if (open) loadDay(state.date).then((d) => { mapDrawnFor = ""; renderMap(d); FX.mapIn($("#mapPanel")); }); else hideCard();
   }
+  function selectHall(slug, { scroll = true } = {}) {
+    state.hall = slug; lsSet(LS_HALL, slug); mapDrawnFor = ""; hideCard(); render();
+    if (state.mapOpen) requestAnimationFrame(() => FX.pinBounce($(`.m-hall[data-hall="${CSS.escape(slug)}"]`)));
+    if (scroll) goToMenu();
+  }
   const mapBox = $("#mapBox");
   mapBox.addEventListener("mouseover", (e) => {
     if (!canHover) return;
@@ -349,12 +367,7 @@
   mapBox.addEventListener("mouseleave", () => { if (canHover) hideCard(); });
   mapBox.addEventListener("click", (e) => {
     const go = e.target.closest("[data-go]");
-    if (go) {
-      state.hall = go.dataset.go; lsSet(LS_HALL, state.hall);
-      mapDrawnFor = ""; hideCard(); render();
-      el.menu.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    }
+    if (go) return selectHall(go.dataset.go);
     const g = e.target.closest(".m-hall");
     if (g) { FX.pinBounce(g); showCard(g.dataset.hall); }
     else if (!e.target.closest(".map-card")) hideCard();
@@ -366,20 +379,23 @@
   });
   $("#mapBtn").addEventListener("click", () => {
     setMapOpen(!state.mapOpen);
-    // 地图在页面上方：如果已经往下滑了，打开后自动滚过去，不然看起来像没反应
+    // 地图不一定在眼前：打开后自动滚过去，不然看起来像没反应
     if (state.mapOpen) requestAnimationFrame(() => $("#mapPanel").scrollIntoView({ behavior: "smooth", block: "start" }));
   });
 
-  // 吸顶标题栏的高度，给 scrollIntoView 留出位置
-  const headEl = document.querySelector(".top");
+  // 吸顶的日期栏：记下高度给 scrollIntoView 留位置；贴顶以后加一道影子
+  const headEl = $(".top");
   const syncHead = () => document.documentElement.style.setProperty("--head-h", headEl.offsetHeight + "px");
-  syncHead(); window.addEventListener("resize", syncHead);
+  const side = $(".side");
+  const syncSide = () => side.classList.toggle("stick", window.innerWidth >= 900 && side.offsetHeight + headEl.offsetHeight + 40 < window.innerHeight);
+  syncHead(); window.addEventListener("resize", () => { syncHead(); syncSide(); });
+  new ResizeObserver(syncSide).observe(side);
+  const barH = () => $(".bar").offsetHeight;
+  window.addEventListener("scroll", () => headEl.classList.toggle("stuck", window.scrollY > barH()), { passive: true });
 
-  // ---------- 奶娃大厨：按现在的时间推荐去哪吃 ----------
-  const CHEF_SVG = `<span class="chef-shadow" aria-hidden="true"></span>
-    <img class="chef-img" src="icons/naiwa-chef.png" alt="奶娃大厨" width="320" height="430" decoding="async">`;
+  // ---------- 奶娃大厨的取餐单 + 各食堂硬菜排行 ----------
   const CHEF_HELLO = {
-    breakfast: ["早上好呀！", "起床啦，吃早饭！", "早餐要吃饱哦～"],
+    breakfast: ["早上好呀，先吃早饭！", "起床啦，早饭要吃饱～", "今天也元气满满！"],
     lunch: ["午饭时间到！", "肚子咕咕叫了吧？", "中午吃顿好的！"],
     dinner: ["晚饭时间到！", "忙了一天，犒劳一下！", "晚上吃点硬的！"],
   };
@@ -389,60 +405,84 @@
     return { date: todayIso, meal: mealForNow(now), late: false };
   }
   async function renderChef() {
-    const box = $("#chef");
     const plan = chefPlan();
-    const dismissKey = `${plan.date}-${plan.meal}`;
-    if (lsGet("uwdining.chef") === dismissKey || state.q) return void (box.hidden = true);
     const day = await loadDay(plan.date);
-    const ranked = state.halls.map((h) => {
-      const picks = hardDishes(h.slug, day, plan.meal, 3, true);
-      return { h, picks, score: picks.reduce((s, p) => s + p.score, 0) };
-    }).filter((r) => r.picks.length).sort((a, b) => b.score - a.score);
+    const rows = state.halls.map((h) => {
+      const picks = hardDishes(h.slug, day, plan.meal, 99, true);
+      return { h, picks, score: picks.slice(0, 3).reduce((s, p) => s + p.score, 0) };
+    });
+    // 先比有硬菜的窗口多少，一样多再比前三道硬菜（肉菜优先、热量高的优先）
+    const ranked = rows.filter((r) => r.picks.length).sort((a, b) => b.picks.length - a.picks.length || b.score - a.score);
+    const closed = rows.filter((r) => !r.picks.length);
+    state.best = ranked.length ? ranked[0].h.slug : null;
+    const when = plan.late ? "明早" : { breakfast: "今早", lunch: "中午", dinner: "今晚" }[plan.meal];
+    const whenMeal = `${plan.late ? "明天" : "今天"}${MEAL_ZH[plan.meal]}`;
     const filterNote = state.filters.size
-      ? `按你选的「${[...state.filters].map((f) => el.filters.querySelector(`[data-f="${f}"]`).textContent).join("、")}」，` : "";
-    const hello = plan.late ? "夜深啦，食堂都关门咯～" : CHEF_HELLO[plan.meal][new Date().getDate() % 3];
-    const when = plan.late ? "明天早上" : { breakfast: "今天早上", lunch: "今天中午", dinner: "今天晚上" }[plan.meal];
-    let body;
+      ? `按「${[...state.filters].map((f) => el.filters.querySelector(`[data-f="${f}"]`).textContent).join("、")}」筛过 · ` : "";
+    const now = new Date();
+    const printed = `${dayLabel(todayIso)} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const hello = plan.late ? "夜深啦，食堂都关门咯，明早见！" : CHEF_HELLO[plan.meal][now.getDate() % 3];
+    const mascot = `<div class="t-mascot" title="戳一下奶娃"><img class="chef-img" src="icons/naiwa-chef.png" alt="奶娃大厨" width="320" height="430" decoding="async"></div>`;
+
+    let html;
     if (!ranked.length) {
-      body = `<p>${filterNote}${when}的${MEAL_ZH[plan.meal]}菜单还没出来，奶娃也不知道该推荐哪儿 🥲</p>`;
+      html = `${mascot}<div class="t-head m"><span>奶娃大厨 · 取餐单</span><span>${printed}</span></div>
+        <div class="t-title"><h1><span class="t-when">${when}${MEAL_ZH[plan.meal]}</span><span class="t-hall">菜单还没出来</span></h1></div>
+        <p class="t-hello">${filterNote}${hello}</p>
+        <hr class="dash"><p class="t-empty">奶娃也不知道该推荐哪儿，先看看别的日子吧。</p>`;
     } else {
-      const [best, second] = ranked;
-      const dishes = best.picks.map((p) => `<b>${esc(p.it.zh || p.it.n)}</b>`).join("、");
-      body = `<p>${filterNote}${when}最好去 <strong class="chef-hall">${esc(best.h.name)}</strong>，有 ${dishes}！</p>
-        ${second ? `<p class="chef-alt">备选：${esc(shortHall(second.h.name))}（${esc(second.picks[0].it.zh || second.picks[0].it.n)}）</p>` : ""}
-        <button type="button" class="chef-go" data-hall="${esc(best.h.slug)}" data-date="${plan.date}" data-meal="${plan.meal}">就去这家 →</button>`;
+      const best = ranked[0], second = ranked[1];
+      const code = state.codes[best.h.slug];
+      const top3 = best.picks.slice(0, 3);
+      html = `${mascot}<div class="t-head m"><span>奶娃大厨 · 取餐单</span><span>${printed}</span></div>
+        <div class="t-title"><span class="t-code" aria-hidden="true">${code}</span>
+          <h1><span class="t-when">${when}去</span><span class="t-hall">${esc(best.h.name)}</span></h1></div>
+        <div class="t-note"><p class="t-hello">${filterNote}${hello}</p><span class="t-stamp" aria-hidden="true">奶娃<br>推荐</span></div>
+        <hr class="dash">
+        <ol class="t-dishes">${top3.map((p) => `<li><div class="line"><span>${esc(p.it.zh || p.it.n)}</span><span class="lead"></span>${calHTML(p.it)}</div><span class="sub">窗口 · ${esc(p.st)}</span></li>`).join("")}</ol>
+        <div class="line t-total m"><span>共 ${top3.length} 道</span><span class="lead"></span><span class="num">${top3.reduce((s, p) => s + (p.it.cal || 0), 0)}</span> <span class="unit">千卡</span></div>
+        <hr class="dash">
+        <div class="t-foot m">${best.picks.length} 个窗口有硬菜${second ? ` · 备选 ${state.codes[second.h.slug]} ${esc(shortHall(second.h.name))}` : ""}</div>
+        <button type="button" class="chef-go" data-hall="${esc(best.h.slug)}" data-date="${plan.date}" data-meal="${plan.meal}">就去这家 ${ARROW}</button>`;
     }
-    const html = `<div class="chef-pic" title="戳一下奶娃">${CHEF_SVG}</div>
-      <div class="chef-bubble"><div class="chef-name">奶娃大厨 · ${hello}</div>${body}</div>
-      <button type="button" class="chef-x" aria-label="关掉奶娃大厨">×</button>`;
-    box.dataset.key = dismissKey;
-    if (renderChef.html === html && !box.hidden) return;
-    renderChef.html = html;
-    box.innerHTML = html;
-    box.hidden = false;
-    FX.chefIn(box);
+    const box = el.chef;
+    if (renderChef.html !== html || box.hidden) {
+      const first = box.hidden;
+      renderChef.html = html;
+      box.innerHTML = html;
+      box.hidden = false;
+      FX.ticketIn(box, { first });
+    }
+
+    // 排行：和地图、菜单用同一套取餐号
+    el.rank.innerHTML = `<div class="rank-head"><h2 id="rankTitle">${whenMeal} · 各食堂硬菜</h2><span class="m">有硬菜的窗口</span></div>
+      <ol>${ranked.map((r, i) => `<li><button type="button" data-hall="${esc(r.h.slug)}" class="${r.h.slug === state.hall ? "current" : ""} ${i === 0 ? "is-best" : ""}">
+          <span class="line"><span><span class="code">${state.codes[r.h.slug]}</span><span class="hall">${esc(shortHall(r.h.name))}</span></span><span class="lead"></span><span class="num">${r.picks.length}</span></span>
+          <span class="sub">${esc(r.picks[0].it.zh || r.picks[0].it.n)}</span></button></li>`).join("")}
+        ${closed.map((r) => `<li><button type="button" data-hall="${esc(r.h.slug)}" class="closed ${r.h.slug === state.hall ? "current" : ""}">
+          <span class="line"><span><span class="code">${state.codes[r.h.slug]}</span><span class="hall">${esc(shortHall(r.h.name))}</span></span><span class="lead"></span><span class="num">0</span></span>
+          <span class="sub">这一餐没有硬菜${state.filters.size ? "（按筛选）" : ""}</span></button></li>`).join("")}</ol>`;
+    el.rank.hidden = false;
   }
-  $("#chef").addEventListener("click", (e) => {
-    const box = $("#chef");
-    if (e.target.closest(".chef-x")) {
-      lsSet("uwdining.chef", box.dataset.key);
-      const hide = () => { box.hidden = true; box.style.cssText = ""; };
-      if (!FX.chefOut(box, hide)) hide();
-      return;
-    }
-    if (e.target.closest(".chef-pic")) { FX.chefJump(e.target.closest(".chef-pic")); return; }
+  el.chef.addEventListener("click", (e) => {
+    if (e.target.closest(".t-mascot")) { FX.chefJump(e.target.closest(".t-mascot")); return; }
     const go = e.target.closest(".chef-go");
     if (go) {
-      state.hall = go.dataset.hall; state.date = go.dataset.date; state.meal = go.dataset.meal;
-      lsSet(LS_HALL, state.hall); mapDrawnFor = ""; render();
-      requestAnimationFrame(() => el.menu.scrollIntoView({ behavior: "smooth", block: "start" }));
+      state.date = go.dataset.date; state.meal = go.dataset.meal;
+      selectHall(go.dataset.hall);
     }
+  });
+  el.rank.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-hall]"); if (!b) return;
+    const plan = chefPlan();
+    state.date = plan.date; state.meal = plan.meal;
+    selectHall(b.dataset.hall);
   });
 
   // ---------- 事件 ----------
   el.halls.addEventListener("click", (e) => {
     const b = e.target.closest("[data-hall]"); if (!b) return;
-    state.hall = b.dataset.hall; lsSet(LS_HALL, state.hall); render();
+    selectHall(b.dataset.hall, { scroll: false });
   });
   el.dates.addEventListener("click", (e) => {
     const b = e.target.closest("[data-date]"); if (!b) return;
@@ -494,10 +534,12 @@
       const h = await loadJSON("data/halls.json");
       state.halls = h.halls || [];
     } catch {
-      el.menu.innerHTML = emptyHTML("⚠️", "加载失败，请检查网络后重试");
+      el.menu.innerHTML = emptyHTML("加载失败", "检查一下网络，然后刷新页面");
       return;
     }
-    if (!state.halls.some((h) => h.slug === state.hall)) state.hall = state.halls[0] && state.halls[0].slug;
+    // 取餐号：首字母 + 序号（C1 Carson's … R5 Rheta's），小票、排行、地图、菜单都用同一个
+    state.halls.forEach((h, i) => { state.codes[h.slug] = h.name.trim()[0].toUpperCase() + (i + 1); });
+    if (!hallBy(state.hall)) state.hall = state.halls[0] && state.halls[0].slug;
     if (lsGet("uwdining.map")) setMapOpen(true);
     render();
   })();

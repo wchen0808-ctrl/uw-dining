@@ -3,73 +3,85 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>UW 食堂菜单</title>
-<meta name="description" content="UW–Madison 学校食堂每日菜单（中文）">
-<meta name="theme-color" content="#c5050c">
+<title>UW 食堂小票</title>
+<meta name="description" content="UW–Madison 五个食堂今天吃什么：中文菜单、过敏原，奶娃大厨告诉你这一餐去哪吃">
+<meta name="theme-color" content="#e4e3de" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f0f0f" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="UW 食堂">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="preload" as="font" type="font/woff2" href="fonts/martian-mono-latin.woff2" crossorigin>
 <link rel="preload" as="image" href="icons/naiwa-chef.png">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
-<header class="top">
-  <div class="title-row">
-    <h1>UW 食堂菜单</h1>
-    <div class="title-btns">
-      <button id="todayBtn" class="today-btn" type="button">回到今天</button>
-      <button id="mapBtn" class="today-btn" type="button" aria-pressed="false" aria-controls="mapPanel">地图</button>
-    </div>
+<header class="bar">
+  <div class="brand"><img src="icons/naiwa-chef.png" alt="" width="320" height="430"><span>UW 食堂小票</span></div>
+  <div class="bar-btns">
+    <button id="todayBtn" class="box-btn" type="button" hidden>回到今天</button>
+    <button id="mapBtn" class="box-btn" type="button" aria-pressed="false" aria-controls="mapPanel">地图</button>
   </div>
-  <nav id="halls" class="halls" aria-label="选择食堂"></nav>
+</header>
+
+<div class="top">
   <div class="dates-wrap">
-    <button id="prevWeek" class="week-btn" type="button" aria-label="上一周">‹</button>
+    <button id="prevWeek" class="week-btn" type="button" aria-label="上一周"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button>
     <div id="dates" class="dates" role="tablist" aria-label="选择日期"></div>
-    <button id="nextWeek" class="week-btn" type="button" aria-label="下一周">›</button>
+    <button id="nextWeek" class="week-btn" type="button" aria-label="下一周"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button>
   </div>
   <div id="meals" class="meals" role="tablist" aria-label="选择餐次">
     <button type="button" data-meal="breakfast">早餐</button>
     <button type="button" data-meal="lunch">午餐</button>
     <button type="button" data-meal="dinner">晚餐</button>
   </div>
-</header>
+</div>
 
-<section id="chef" class="chef" hidden aria-live="polite" aria-label="奶娃大厨推荐"></section>
-
-<section id="mapPanel" class="map-panel" hidden aria-label="食堂地图">
-  <div class="map-head"><span id="mapTitle">食堂地图</span><small id="mapHint">点食堂看硬菜</small></div>
-  <div id="mapBox" class="map-box"></div>
-  <p class="map-note">校园示意图，位置大致准确，比例仅供参考</p>
-</section>
-
-<section class="tools">
-  <label class="search">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-    <input id="q" type="search" placeholder="搜索今天所有食堂的菜（中英文都行）" autocomplete="off" enterkeyhint="search">
-    <button id="clearQ" class="clear" type="button" aria-label="清除搜索" hidden>×</button>
-  </label>
-  <div id="filters" class="filters" aria-label="筛选">
-    <button type="button" data-f="veg" aria-pressed="false">素食</button>
-    <button type="button" data-f="vegan" aria-pressed="false">纯素</button>
-    <button type="button" data-f="halal" aria-pressed="false">清真</button>
-    <button type="button" data-f="top9" aria-pressed="false">无常见过敏原</button>
+<div class="layout">
+  <div class="side">
+    <section id="chef" class="ticket paper" hidden aria-live="polite" aria-label="奶娃大厨的取餐单"></section>
+    <section id="rank" class="rank paper" hidden aria-labelledby="rankTitle"></section>
+    <section id="mapPanel" class="map-panel paper" hidden aria-labelledby="mapTitle">
+      <div class="map-head"><h2 id="mapTitle">食堂地图</h2><small id="mapHint">点食堂看硬菜</small></div>
+      <div id="mapBox" class="map-box"></div>
+      <p class="map-note">校园示意图，位置大致准确，比例仅供参考</p>
+    </section>
   </div>
-</section>
 
-<main id="menu" class="menu" aria-live="polite"></main>
+  <section class="receipt paper" aria-labelledby="menuTitle">
+    <div class="receipt-head">
+      <h2 id="menuTitle">菜单</h2>
+      <p id="menuMeta" class="mono-meta"></p>
+    </div>
+    <nav id="halls" class="halls" aria-label="选择食堂"></nav>
+    <div class="tools">
+      <label class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+        <input id="q" type="search" placeholder="搜今天所有食堂的菜，中英文都行" autocomplete="off" enterkeyhint="search">
+        <button id="clearQ" class="clear" type="button" aria-label="清除搜索" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8"/></svg></button>
+      </label>
+      <div id="filters" class="filters" aria-label="筛选">
+        <button type="button" data-f="veg" aria-pressed="false">素食</button>
+        <button type="button" data-f="vegan" aria-pressed="false">纯素</button>
+        <button type="button" data-f="halal" aria-pressed="false">清真</button>
+        <button type="button" data-f="top9" aria-pressed="false">无常见过敏原</button>
+      </div>
+    </div>
+    <main id="menu" class="menu" aria-live="polite"></main>
+  </section>
+</div>
 
 <footer class="foot">
-  <p>数据来自 <a href="https://wisc-housingdining.nutrislice.com/" target="_blank" rel="noopener">UW Housing Dining</a>（Nutrislice），每天自动更新两次。</p>
+  <p>数据来自 <a href="https://wisc-housingdining.nutrislice.com/" target="_blank" rel="noopener">UW Housing Dining</a>（Nutrislice），每天自动更新两次。与 UW–Madison 官方无关。</p>
   <p><strong>过敏提示：</strong>过敏原与饮食标签仅供参考，可能有变动或交叉接触，请以食堂现场标注为准。</p>
 </footer>
 
-<div id="toast" class="toast" hidden></div>
+<div id="toast" class="toast" role="status" hidden></div>
 <script src="vendor/motion-14.9.0.js"></script>
-<script src="fx.js?v=7"></script>
-<script src="app.js?v=7"></script>
+<script src="fx.js?v=8"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:390px;height:844px;overflow:hidden}
+body{background:#e6e5e0;font:15px/1.4 "PingFang SC","Noto Sans SC",system-ui,sans-serif;color:#1a1a1a}
+.m{font-family:"Martian Mono",monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.bar{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 8px}
+.bar b{font-size:17px}.bar .m{font-size:11px;color:#6b6b66}
+.days{display:flex;gap:4px;padding:0 16px 10px}
+.days span{flex:1;text-align:center;padding:6px 0;font-size:12px;color:#55554f}
+.days span.on{background:#1a1a1a;color:#fff}
+.meal{display:flex;margin:0 16px 12px;border:1.5px solid #1a1a1a}
+.meal span{flex:1;text-align:center;padding:7px 0;font-weight:600}
+.meal span.on{background:#1a1a1a;color:#fff}
+.ticket{position:relative;margin:0 16px;background:#f4f4f1;padding:16px 16px 20px;
+  -webkit-mask:radial-gradient(circle 6px at 50% 100%,#0000 98%,#000) 0 0/14px 100% repeat-x}
+.ticket .hd{display:flex;justify-content:space-between;font-size:11px;color:#6b6b66}
+.ticket h1{margin:8px 0 2px;font-size:26px;line-height:1.15}
+.ticket .no{font-size:44px;font-weight:600;line-height:1}
+.dash{border-top:1.5px dashed #9a9a94;margin:10px 0}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:15px;padding:2px 0}
+.row i{flex:1;border-bottom:1.5px dotted #b4b4ae;margin:0 4px 5px}
+.stamp{position:absolute;right:14px;top:58px;width:84px;height:84px;border:3px solid #c5050c;border-radius:50%;
+  color:#c5050c;display:grid;place-items:center;transform:rotate(-14deg);font-weight:800;font-size:15px;text-align:center;line-height:1.1}
+.egg{position:absolute;right:20px;top:-26px;width:52px;height:64px;border-radius:50% 50% 46% 46%/58% 58% 42% 42%;background:#f6b81f}
+.rank{margin:16px 16px 0;background:#f4f4f1;padding:12px 16px}
+.rank .row{font-size:14px}.rank .row.top{font-weight:700}
+.go{margin-top:12px;background:#c5050c;color:#fff;text-align:center;padding:11px;font-weight:700}
+</style></head><body>
+<div class="bar"><b>UW 食堂小票</b><span class="m">2026-11-18 周三 17:42</span></div>
+<div class="days"><span class="on">今天</span><span>周四</span><span>周五</span><span>周六</span><span>周日</span><span>周一</span><span>周二</span></div>
+<div class="meal"><span>早餐</span><span>午餐</span><span class="on">晚餐</span></div>
+<div class="ticket">
+  <div class="egg"></div>
+  <div class="hd m"><span>奶娃大厨 · 取餐单</span><span>#R5</span></div>
+  <h1>今晚去<br>Rheta's Market</h1>
+  <div class="no m">R5</div>
+  <div class="stamp">奶娃<br>推荐</div>
+  <div class="dash"></div>
+  <div class="row"><span>泰式烧烤猪排骨</span><i></i><span class="m">298</span></div>
+  <div class="row"><span>鸡肉锅派配司康饼</span><i></i><span class="m">420</span></div>
+  <div class="row"><span>香辣脆皮鸡三明治</span><i></i><span class="m">388</span></div>
+  <div class="dash"></div>
+  <div class="row m" style="font-size:12px;color:#6b6b66"><span>3 道硬菜 · 千卡</span><span>420 N Park St</span></div>
+  <div class="go">就去这家 →</div>
+</div>
+<div class="rank">
+  <div class="row m" style="font-size:11px;color:#6b6b66"><span>今晚硬菜排行</span><span>道数</span></div>
+  <div class="row top"><span>R5 Rheta's</span><i></i><span class="m">3</span></div>
+  <div class="row"><span>C1 Carson's</span><i></i><span class="m">3</span></div>
+  <div class="row"><span>G3 Gordon</span><i></i><span class="m">2</span></div>
+  <div class="row"><span>F2 Four Lakes</span><i></i><span class="m">2</span></div>
+  <div class="row"><span>L4 Liz's</span><i></i><span class="m">1</span></div>
+</div>
+</body></html>

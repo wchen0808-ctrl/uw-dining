@@ -84,20 +84,25 @@
       if (p) animate(p, { y: [0, -10, 0] }, { duration: 0.45, ease: "easeOut" });
     }),
 
-    // 奶娃大厨：蹦出来 → 气泡弹开 → 一直轻轻晃
-    chefIn: safe((box) => {
-      const pic = box.querySelector(".chef-pic"), bubble = box.querySelector(".chef-bubble");
-      animate(pic, { y: [40, 0], scale: [0.5, 1], opacity: [0, 1], rotate: [-12, 0] }, { type: "spring", stiffness: 300, damping: 12 });
-      animate(bubble, { opacity: [0, 1], scale: [0.85, 1], x: [-10, 0] }, { type: "spring", stiffness: 380, damping: 20, delay: 0.18 });
-      animate(bubble.querySelectorAll("b, .chef-hall"), { opacity: [0, 1], y: [6, 0] }, { delay: stagger(0.08, { startDelay: 0.35 }), duration: 0.3 });
-      const go = bubble.querySelector(".chef-go");
-      if (go) animate(go, { scale: [1, 1.06, 1] }, { duration: 1.6, repeat: Infinity, repeatDelay: 1.4, delay: 1.2, ease: "easeInOut" });
-      // 蛋形身体：呼吸一样的“压扁-拉长”，影子跟着变大变小
-      const img = pic.querySelector(".chef-img"), shadow = pic.querySelector(".chef-shadow");
-      if (img) animate(img, { scaleY: [1, 0.95, 1.03, 1], scaleX: [1, 1.04, 0.98, 1], y: [0, 0, -3, 0] },
-        { duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 0.9 });
-      if (shadow) animate(shadow, { scaleX: [1, 1.08, 0.88, 1], opacity: [1, 1, 0.75, 1] },
-        { duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 0.9 });
+    // 招牌动作：取餐单从上沿“打印”出来 → 红章盖下去 → 奶娃从票后面冒出来，然后一直轻轻呼吸
+    ticketIn: safe((box, { first } = {}) => {
+      const stamp = box.querySelector(".t-stamp"), mascot = box.querySelector(".t-mascot");
+      const img = mascot && mascot.querySelector(".chef-img");
+      if (first) {
+        // 撕边和奶娃都在盒子外面，裁切框要留出余量
+        animate(box, { clipPath: ["inset(-48px -14px calc(100% + 12px) -14px)", "inset(-48px -14px -12px -14px)"] },
+          { duration: 0.75, ease: [0.16, 1, 0.3, 1] });
+        animate(box.querySelectorAll(".t-head, .t-hello, .t-title, .t-dishes li, .t-foot, .chef-go"),
+          { opacity: [0, 1], y: [-6, 0] }, { delay: stagger(0.05, { startDelay: 0.12 }), duration: 0.3 });
+      }
+      if (stamp) animate(stamp, { scale: [2.2, 1], opacity: [0, 0.92], rotate: [-38, -14] },
+        { type: "spring", stiffness: 520, damping: 22, delay: first ? 0.62 : 0.05 });
+      if (img) {
+        animate(img, { y: [36, 0], opacity: [0, 1] }, { type: "spring", stiffness: 320, damping: 14, delay: first ? 0.45 : 0 });
+        // 蛋形身体：呼吸一样的“压扁-拉长”
+        animate(img, { scaleY: [1, 0.95, 1.03, 1], scaleX: [1, 1.04, 0.98, 1] },
+          { duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 1.3 });
+      }
     }),
     // 点一下奶娃：原地跳起来转一圈
     chefJump: safe((pic) => {

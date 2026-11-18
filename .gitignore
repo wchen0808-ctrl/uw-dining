@@ -4,3 +4,6 @@ node_modules/
 test-results/
 .DS_Store
 Thumbs.db
+.taste-skill/
+.impeccable/questions/
+.impeccable/review/

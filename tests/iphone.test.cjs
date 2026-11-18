@@ -57,7 +57,7 @@ async function run(browserType, deviceName, scheme) {
   await page.waitForSelector(".station");
   const stations = await page.locator(".station").count();
   check(stations > 0, `午餐有 ${stations} 个窗口`);
-  const firstStation = await page.locator(".station h2").first().innerText();
+  const firstStation = await page.locator(".station h3").first().innerText();
   check(!/Build Your Own/i.test(firstStation), `窗口名正确：${firstStation.split("\n")[0]}`);
   check(await page.locator(".item .cal").count() > 0, "显示热量");
   check(await page.locator(".alg").first().innerText().then((t) => t.startsWith("含：")), "显示中文过敏原");
@@ -65,10 +65,10 @@ async function run(browserType, deviceName, scheme) {
 
   // 切换食堂并记住
   await page.click(".halls button:nth-child(3)");
-  const chosen = await page.locator('.halls [aria-pressed="true"]').innerText();
+  const chosen = await page.locator('.halls [aria-pressed="true"]').getAttribute("data-hall");
   await page.reload();
   await page.waitForSelector(".station, .empty-state");
-  check(await page.locator('.halls [aria-pressed="true"]').innerText() === chosen, `localStorage 记住食堂：${chosen}`);
+  check(await page.locator('.halls [aria-pressed="true"]').getAttribute("data-hall") === chosen, `localStorage 记住食堂：${chosen}`);
   await page.click('.meals [data-meal="lunch"]');
 
   // 筛选
@@ -115,8 +115,8 @@ async function run(browserType, deviceName, scheme) {
 
   // 奶娃大厨
   await page.waitForSelector("#chef:not([hidden])");
-  const chefText = await page.locator("#chef .chef-bubble").innerText();
-  check(/最好去|还没出来/.test(chefText), `奶娃大厨出现：${chefText.replace(/\s+/g, " ").slice(0, 70)}…`);
+  const chefText = await page.locator("#chef").innerText();
+  check(/去|还没出来/.test(chefText) && (await page.locator("#chef h1").count()) === 1, `奶娃大厨出现：${chefText.replace(/\s+/g, " ").slice(0, 70)}…`);
   await page.waitForTimeout(1200);
   await page.locator("#chef").screenshot({ path: path.join(SHOTS, `${tag}-5-chef.png`) });
   if (await page.locator("#chef .chef-go").count()) {
@@ -126,14 +126,14 @@ async function run(browserType, deviceName, scheme) {
     const chosenSlug = await page.locator('.halls [aria-pressed="true"]').getAttribute("data-hall");
     check(chosenSlug === target, `点“就去这家”切到 ${target}`);
   }
-  await page.click("#chef .chef-x");
-  await page.waitForTimeout(400);
-  check(await page.locator("#chef").isHidden(), "关掉奶娃大厨");
-  await page.reload();
-  await page.waitForSelector(".station, .empty-state");
+  // 排行：5 个食堂，点一行切到那家
+  check(await page.locator("#rank button[data-hall]").count() === 5, "硬菜排行列出 5 个食堂");
+  const rankSlug = await page.locator("#rank button[data-hall]").nth(1).getAttribute("data-hall");
+  await page.locator("#rank button[data-hall]").nth(1).click();
   await page.waitForTimeout(300);
-  check(await page.locator("#chef").isHidden(), "这一餐关掉后刷新也不再出现");
-  await page.evaluate(() => localStorage.removeItem("uwdining.chef"));
+  check(await page.locator('.halls [aria-pressed="true"]').getAttribute("data-hall") === rankSlug, `点排行第二名切到 ${rankSlug}`);
+  const codes = await page.locator(".halls .code").allInnerTexts();
+  check(codes.join(",") === "C1,F2,G3,L4,R5", `取餐号 ${codes.join(" ")}`);
 
   // 地图：从页面下方点“地图”，要自动滚到地图
   await page.click('.meals [data-meal="dinner"]');
@@ -152,7 +152,7 @@ async function run(browserType, deviceName, scheme) {
   check(inside, "卡片没有超出地图");
   await page.locator("#mapPanel").screenshot({ path: path.join(SHOTS, `${tag}-4-map.png`) });
   await page.click("#mapCard .go");
-  check(await page.locator('.halls [aria-pressed="true"]').innerText() === "Rheta's", "点卡片按钮切到 Rheta's 菜单");
+  check(await page.locator('.halls [aria-pressed="true"]').getAttribute("data-hall") === "rhetas-market", "点卡片按钮切到 Rheta's 菜单");
   await page.click("#mapBtn");
 
   // PWA
@@ -181,6 +181,9 @@ async function desktopHover() {
   await page.goto(`${base}/cafeteria/`);
   await page.waitForSelector(".station, .empty-state");
   await page.click("#mapBtn");
+  await page.waitForTimeout(900);
+  await page.locator("#mapBox").evaluate((e) => e.scrollIntoView({ block: "center" }));
+  await page.waitForTimeout(300);
   await page.locator('.m-hall[data-hall="gordon-avenue-market"] .pin').hover();
   await page.waitForSelector("#mapCard:not([hidden])");
   check((await page.locator("#mapCard h3").innerText()).includes("Gordon"), "悬停 Gordon 显示卡片");
