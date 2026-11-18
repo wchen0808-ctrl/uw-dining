@@ -22,6 +22,8 @@
   --map-green: #d5e6c4;
   --map-road: #ffffff;
   --map-path: #7aa86a;
+  --chef-line: #d9cfc4;
+  --accent-text: #c5050c;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -46,6 +48,8 @@
     --map-green: #2c3a26;
     --map-road: #3a3734;
     --map-path: #6f9a60;
+    --chef-line: #5a524c;
+    --accent-text: #ff7a7f;
   }
 }
 * { box-sizing: border-box; }
@@ -99,7 +103,11 @@ h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: .02em; }
 .dates button[aria-selected="true"] .dd { background: #fff; color: var(--red-dark); box-shadow: none; }
 .dates button.no-data { opacity: .4; }
 
-.meals { display: grid; grid-template-columns: repeat(3, 1fr); padding: 4px 16px 0; }
+.meals { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); padding: 4px 16px 0; }
+.meal-ink { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; border-radius: 3px 3px 0 0; background: #fff; pointer-events: none; }
+.meals.has-ink button[aria-selected="true"] { border-bottom-color: transparent; }
+.has-motion .chef-pic, .has-motion .chef-bubble, .has-motion .menu.slide-l, .has-motion .menu.slide-r { animation: none; }
+.chef-pic { cursor: pointer; }
 .meals button {
   border: 0; background: none; color: rgba(255,255,255,.78); padding: 9px 0 10px; font-size: 15px;
   border-bottom: 3px solid transparent;
@@ -109,6 +117,52 @@ h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: .02em; }
 
 .title-btns { display: flex; gap: 6px; }
 .today-btn[aria-pressed="true"] { background: #fff; color: var(--red-dark); border-color: #fff; font-weight: 600; }
+
+/* ---------- 奶娃大厨 ---------- */
+.map-panel, .menu, .chef { scroll-margin-top: calc(var(--head-h, 180px) + 8px); }
+.chef {
+  position: relative; display: flex; align-items: flex-end; gap: 10px;
+  max-width: 760px; margin: 12px auto 0; padding: 0 16px;
+}
+.chef[hidden] { display: none; }
+.chef-pic { flex: none; width: 76px; animation: chefHop .6s ease-out; transform-origin: 50% 100%; }
+.chef-pic svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chef-pic:hover, .chef-pic:active { animation: chefWiggle .5s; }
+.chef .hat circle, .chef .hat rect { fill: #fff; stroke: var(--chef-line); stroke-width: 2; }
+.chef .band { fill: var(--red); }
+.chef .face { fill: #ffd8b5; stroke: var(--chef-line); stroke-width: 2; }
+.chef .curl { fill: none; stroke: #6b4a2e; stroke-width: 2.5; stroke-linecap: round; }
+.chef .eye { fill: #2b2220; }
+.chef .glint { fill: #fff; }
+.chef .cheek { fill: #ff9aa2; opacity: .75; }
+.chef .mouth { fill: none; stroke: #8a3b2e; stroke-width: 2.5; stroke-linecap: round; }
+.chef .spoon { fill: #b8b2aa; }
+.chef-bubble {
+  position: relative; flex: 1; min-width: 0; background: var(--card); border: 1px solid var(--line);
+  border-radius: 16px 16px 16px 4px; padding: 10px 30px 10px 12px; box-shadow: var(--shadow);
+  animation: bubbleIn .35s ease-out .15s both;
+}
+.chef-bubble::before {
+  content: ""; position: absolute; left: -7px; bottom: 10px; width: 12px; height: 12px;
+  background: var(--card); border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: rotate(45deg);
+}
+.chef-name { font-size: 12px; color: var(--accent-text); font-weight: 700; margin-bottom: 3px; }
+.chef-bubble p { margin: 0; font-size: 14px; }
+.chef-bubble p b { font-weight: 600; }
+.chef-hall { color: var(--accent-text); }
+.chef-alt { color: var(--muted); font-size: 12.5px !important; margin-top: 3px !important; }
+.chef-go {
+  margin-top: 8px; border: 0; border-radius: 999px; padding: 5px 14px;
+  background: var(--red); color: #fff; font-weight: 600; font-size: 13.5px;
+}
+.chef-x {
+  position: absolute; top: 4px; right: 20px; width: 26px; height: 26px; border: 0; background: none;
+  color: var(--muted); font-size: 18px; line-height: 1; padding: 0;
+}
+@keyframes chefHop { 0% { transform: translateY(16px) scale(.8); opacity: 0; } 60% { transform: translateY(-6px) scale(1.04); opacity: 1; } 100% { transform: none; } }
+@keyframes chefWiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+@keyframes bubbleIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .chef-pic, .chef-bubble, .chef-pic:hover { animation: none; } }
 
 /* ---------- 地图 ---------- */
 .map-panel { padding: 12px 16px 0; max-width: 760px; margin: 0 auto; }
@@ -133,6 +187,7 @@ h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: .02em; }
 .m-landmark circle { fill: var(--muted); }
 .m-landmark text { fill: var(--muted); font-size: 14px; }
 .m-hall { cursor: pointer; outline: none; }
+.m-hall .pin-g { transform-box: fill-box; transform-origin: 50% 100%; }
 .m-hall .pin { fill: var(--red); stroke: #fff; stroke-width: 2.5; transition: transform .15s; transform-box: fill-box; transform-origin: 50% 100%; }
 .m-hall .pin-dot { fill: #fff; pointer-events: none; }
 .m-hall text { font-size: 21px; font-weight: 700; fill: var(--text); paint-order: stroke; stroke: var(--map-land); stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }
@@ -227,7 +282,7 @@ h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: .02em; }
 .foot a { color: inherit; }
 
 .toast {
-  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; bottom: calc(24px + env(safe-area-inset-bottom));
   background: rgba(30,30,30,.92); color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 13px; z-index: 20;
   max-width: calc(100% - 32px);
 }

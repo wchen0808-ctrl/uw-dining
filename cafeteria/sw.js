@@ -1,7 +1,7 @@
 // 网络优先：有网时总是拿最新的；没网或超时就用缓存。
-const CACHE = "uw-dining-v4";
+const CACHE = "uw-dining-v6";
 const SHELL = [
-  "./", "index.html", "style.css?v=4", "app.js?v=4", "manifest.webmanifest",
+  "./", "index.html", "style.css?v=6", "app.js?v=6", "fx.js?v=6", "vendor/motion-14.9.0.js", "manifest.webmanifest",
   "icons/icon.svg", "icons/icon-180.png", "icons/icon-192.png", "icons/icon-512.png",
   "data/halls.json",
 ];

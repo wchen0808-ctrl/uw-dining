@@ -105,9 +105,43 @@ async function run(browserType, deviceName, scheme) {
   await page.screenshot({ path: path.join(SHOTS, `${tag}-3-search.png`) });
   await page.click("#clearQ");
 
-  // 地图：点图钉看硬菜，再跳到完整菜单
+  // Motion 动效已加载：餐次白条对准选中的标签
+  const ink = await page.evaluate(() => {
+    const i = document.querySelector(".meal-ink"), on = document.querySelector('.meals [aria-selected="true"]');
+    if (!document.documentElement.classList.contains("has-motion") || !i) return null;
+    return Math.abs(i.getBoundingClientRect().left - on.getBoundingClientRect().left) < 2;
+  });
+  check(ink === true, "Motion 动效已加载，餐次白条对准选中标签");
+
+  // 奶娃大厨
+  await page.waitForSelector("#chef:not([hidden])");
+  const chefText = await page.locator("#chef .chef-bubble").innerText();
+  check(/最好去|还没出来/.test(chefText), `奶娃大厨出现：${chefText.replace(/\s+/g, " ").slice(0, 70)}…`);
+  await page.waitForTimeout(1200);
+  await page.locator("#chef").screenshot({ path: path.join(SHOTS, `${tag}-5-chef.png`) });
+  if (await page.locator("#chef .chef-go").count()) {
+    const target = await page.locator("#chef .chef-go").getAttribute("data-hall");
+    await page.click("#chef .chef-go");
+    await page.waitForTimeout(300);
+    const chosenSlug = await page.locator('.halls [aria-pressed="true"]').getAttribute("data-hall");
+    check(chosenSlug === target, `点“就去这家”切到 ${target}`);
+  }
+  await page.click("#chef .chef-x");
+  await page.waitForTimeout(400);
+  check(await page.locator("#chef").isHidden(), "关掉奶娃大厨");
+  await page.reload();
+  await page.waitForSelector(".station, .empty-state");
+  await page.waitForTimeout(300);
+  check(await page.locator("#chef").isHidden(), "这一餐关掉后刷新也不再出现");
+  await page.evaluate(() => localStorage.removeItem("uwdining.chef"));
+
+  // 地图：从页面下方点“地图”，要自动滚到地图
   await page.click('.meals [data-meal="dinner"]');
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await page.click("#mapBtn");
+  await page.waitForTimeout(900);
+  const mapInView = await page.evaluate(() => { const r = document.querySelector("#mapBox").getBoundingClientRect(); return r.top >= 0 && r.top < window.innerHeight; });
+  check(mapInView, "从页面底部打开地图，会自动滚到地图");
   await page.waitForSelector(".m-hall");
   check(await page.locator(".m-hall").count() === 5, "地图上有 5 个食堂");
   await page.locator('.m-hall[data-hall="rhetas-market"] .pin').click();
