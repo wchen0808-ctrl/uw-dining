@@ -32,7 +32,7 @@
     halls: $("#halls"), dates: $("#dates"), meals: $("#meals"), menu: $("#menu"),
     prev: $("#prevWeek"), next: $("#nextWeek"), today: $("#todayBtn"),
     q: $("#q"), clearQ: $("#clearQ"), filters: $("#filters"), toast: $("#toast"),
-    menuTitle: $("#menuTitle"), menuMeta: $("#menuMeta"), chef: $("#chef"), rank: $("#rank"),
+    hardSlot: $("#hardSlot"), menuTitle: $("#menuTitle"), menuMeta: $("#menuMeta"), chef: $("#chef"), rank: $("#rank"),
   };
 
   function has(it, tag) { return (it.d || []).includes(tag); }
@@ -128,16 +128,16 @@
 
   // ---------- 菜单小票 ----------
   function passes(it) { for (const f of state.filters) if (!FILTERS[f](it)) return false; return true; }
-  function itemHTML(it, where) {
+  function itemHTML(it, where, hard) {
     const tags = ["Vegan", "Vegetarian", "Halal", "Top 9 Free"]
       .filter((t) => has(it, t) && !(t === "Vegetarian" && has(it, "Vegan")))
       .map((t) => `<span class="tag ${DIET[t].cls}">${DIET[t].zh}</span>`).join("");
     const alg = allergenText(it);
-    return `<div class="item">
+    return `<div class="item${hard ? " is-hard" : ""}"${hard ? ` id="hard-${hard}"` : ""}>
       <div class="line"><span class="name">${esc(it.zh || it.n)}</span><span class="lead"></span>${calHTML(it)}</div>
       ${it.zh ? `<div class="en" lang="en">${esc(it.n)}</div>` : ""}
       ${where ? `<div class="where">${esc(where)}</div>` : ""}
-      ${tags ? `<div class="tags">${tags}</div>` : ""}
+      ${tags || hard ? `<div class="tags">${hard ? `<span class="tag hard">硬菜</span>` : ""}${tags}</div>` : ""}
       ${alg ? `<div class="alg">${esc(alg)}</div>` : ""}
     </div>`;
   }
@@ -146,6 +146,7 @@
   }
 
   function renderMenu(day) {
+    el.hardSlot.innerHTML = "";
     if (state.q) return renderSearch(day);
     const h = hallBy(state.hall);
     el.menuTitle.textContent = h ? `${h.name} 菜单` : "菜单";
@@ -156,15 +157,25 @@
       el.menuMeta.textContent = meta;
       return void (el.menu.innerHTML = emptyHTML(`这一天没有${MEAL_ZH[state.meal]}`, "换个餐次，或者看看其他食堂"));
     }
+    // 这一餐的硬菜：放在菜单最上面，列表里对应的菜也打上“硬菜”标签
+    const picks = hardDishes(state.hall, day, state.meal, 4, true);
+    const hardIdx = new Map(picks.map((p, i) => [p.it, i + 1]));
     let total = 0, shown = 0;
     const html = stations.map((st) => {
       const items = st.items.filter(passes);
       total += st.items.length; shown += items.length;
       if (!items.length) return "";
       return `<section class="station"><h3>${esc(st.name)}</h3>${st.note ? `<p class="note">${esc(noteZh(st.note))}</p>` : ""}
-        ${items.map((it) => itemHTML(it)).join("")}</section>`;
+        ${items.map((it) => itemHTML(it, null, hardIdx.get(it))).join("")}</section>`;
     }).join("");
+    const hardBlock = picks.length ? `<section class="hard-block" aria-labelledby="hardTitle">
+        <h3 id="hardTitle"><span>这一餐的硬菜</span><span class="m">${state.codes[state.hall] || ""} · ${MEAL_ZH[state.meal]}</span></h3>
+        <ol>${picks.map((p, i) => `<li><a href="#hard-${i + 1}" data-jump="hard-${i + 1}">
+          <span class="line"><span class="name">${esc(p.it.zh || p.it.n)}</span><span class="lead"></span>${calHTML(p.it)}</span>
+          <span class="sub">窗口 · ${esc(p.st)}${p.it.zh ? ` · ${esc(p.it.n)}` : ""}</span></a></li>`).join("")}</ol>
+      </section>` : "";
     el.menuMeta.textContent = `${meta} · ${state.filters.size ? `筛选后 ${shown}/${total}` : total} 道菜`;
+    el.hardSlot.innerHTML = shown ? hardBlock : "";
     el.menu.innerHTML = (shown ? html : emptyHTML("没有符合筛选的菜", "把上面的筛选关掉几个试试")) +
       `<p class="hint">左右滑动换一天</p>`;
   }
@@ -199,6 +210,7 @@
     await renderChef();
     if (state.mapOpen) renderMap(day);
     if (document.documentElement.classList.contains("has-motion")) {
+      FX.menuIn(el.hardSlot, 0);
       FX.menuIn(el.menu, anim === "slide-l" ? 1 : anim === "slide-r" ? -1 : 0);
     } else if (anim) {
       el.menu.classList.remove("slide-l", "slide-r");
@@ -510,6 +522,15 @@
   });
   el.q.addEventListener("keydown", (e) => { if (e.key === "Enter") el.q.blur(); });
   el.clearQ.addEventListener("click", () => { el.q.value = ""; el.clearQ.hidden = true; state.q = ""; render(); el.q.focus(); });
+
+  // 点硬菜：滚到列表里那道菜，闪一下
+  el.hardSlot.addEventListener("click", (e) => {
+    const a = e.target.closest("[data-jump]"); if (!a) return;
+    e.preventDefault();
+    const target = document.getElementById(a.dataset.jump); if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.remove("flash"); void target.offsetWidth; target.classList.add("flash");
+  });
 
   // 左右滑动换一天
   let sx = 0, sy = 0, st = 0, tracking = false;

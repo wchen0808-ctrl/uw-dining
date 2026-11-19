@@ -75,7 +75,7 @@ python scripts/fetch_menus.py
 
 ## 改了网页之后
 
-改了 `app.js` 或 `style.css` 后，把 `index.html` 里的 `?v=8` 和 `sw.js` 里的版本号一起加 1，否则手机可能继续用缓存里的旧文件。
+改了 `app.js` 或 `style.css` 后，把 `index.html` 里的 `?v=10` 和 `sw.js` 里的版本号一起加 1，否则手机可能继续用缓存里的旧文件。
 
 ## 测试
 

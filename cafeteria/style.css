@@ -161,6 +161,7 @@ svg { flex: none; }
 .t-dishes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .line { display: flex; align-items: baseline; gap: 6px; }
 .line .lead { flex: 1; min-width: 12px; border-bottom: 2px dotted var(--dot); transform: translateY(-4px); }
+.line .cal { white-space: nowrap; flex: none; }
 .line .num { font-family: var(--mono); font-stretch: 87.5%; font-variant-numeric: tabular-nums; font-weight: 600; letter-spacing: -0.02em; }
 .line .unit { font-size: 11px; color: var(--fade); }
 .t-dishes .sub { display: block; font-size: 12px; color: var(--fade); margin-top: 1px; }
@@ -231,6 +232,25 @@ svg { flex: none; }
 .has-motion .menu.slide-l, .has-motion .menu.slide-r { animation: none; }
 .summary { margin: 0 0 6px; font-size: 12px; color: var(--fade); font-family: var(--mono); font-stretch: 87.5%; letter-spacing: -0.02em; }
 .station { margin-top: 18px; }
+/* 这一餐的硬菜：菜单顶上一块加粗边框的小票，标题反白 */
+.hard-block { border: 2px solid var(--ink); margin: 14px 0 2px; }
+.hard-block h3 {
+  margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  background: var(--ink); color: var(--paper); padding: 8px 12px; font-size: 16px; font-weight: 700;
+}
+.hard-block h3 .m { font-size: 11.5px; font-weight: 600; }
+.hard-block ol { list-style: none; margin: 0; padding: 4px 12px 6px; }
+.hard-block li + li { border-top: 1.5px dashed var(--dot); }
+.hard-block a { display: block; padding: 9px 0; text-decoration: none; min-height: 48px; }
+.hard-block .line { font-size: 16px; }
+.hard-block .name { font-weight: 700; }
+.hard-block .num { font-size: 17px; }
+.hard-block .sub { display: block; font-size: 12.5px; color: var(--fade); margin-top: 1px; }
+.hard-block a:hover .name { text-decoration: underline; text-underline-offset: 3px; }
+.tag.hard { border-color: var(--stamp); color: var(--stamp); }
+.item.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { 0%, 35% { background: var(--paper-2); box-shadow: -10px 0 0 var(--paper-2), 10px 0 0 var(--paper-2); } 100% { background: transparent; box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) { .item.flash { animation: none; background: var(--paper-2); } }
 @media (min-width: 1120px) {
   .menu { columns: 2; column-gap: 40px; }
   .menu .station { margin-top: 0; padding-top: 18px; }

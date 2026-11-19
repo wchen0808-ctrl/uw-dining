@@ -34,7 +34,7 @@
     // 换一天：整块菜单从滑动方向弹进来；窗口卡片依次浮现
     menuIn: safe((menu, dir) => {
       if (dir) animate(menu, { x: [dir * 48, 0], opacity: [0.25, 1] }, springy);
-      const cards = menu.querySelectorAll(".station, .empty-state");
+      const cards = menu.querySelectorAll(".hard-block, .station, .empty-state");
       if (cards.length) {
         animate(cards, { opacity: [0, 1], y: [16, 0] },
           { delay: stagger(0.045, { startDelay: dir ? 0.04 : 0 }), duration: 0.38, ease: [0.2, 0.8, 0.2, 1] });

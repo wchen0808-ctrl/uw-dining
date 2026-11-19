@@ -71,6 +71,15 @@ async function run(browserType, deviceName, scheme) {
   check(await page.locator('.halls [aria-pressed="true"]').getAttribute("data-hall") === chosen, `localStorage 记住食堂：${chosen}`);
   await page.click('.meals [data-meal="lunch"]');
 
+  // 选了食堂以后，这一餐的硬菜在菜单最上面，点一下跳到列表里那道菜
+  const hardRows = await page.locator(".hard-block li").count();
+  const hardAbove = await page.evaluate(() => { const h = document.querySelector("#hardSlot .hard-block"), q = document.querySelector(".search"); return !!h && h.getBoundingClientRect().top < q.getBoundingClientRect().top; });
+  check(hardRows > 0 && hardAbove, `硬菜紧跟在食堂按钮下面、搜索框上面（${hardRows} 道）`);
+  check(await page.locator(".item.is-hard .tag.hard").count() === hardRows, "列表里的硬菜都有标签");
+  await page.locator(".hard-block a").first().click();
+  await page.waitForTimeout(700);
+  check(await page.evaluate(() => { const r = document.getElementById("hard-1").getBoundingClientRect(); return r.top > 0 && r.bottom < innerHeight; }), "点硬菜跳到列表里那道菜");
+
   // 筛选
   const before = await page.locator(".item").count();
   await page.click('[data-f="vegan"]');
@@ -146,6 +155,7 @@ async function run(browserType, deviceName, scheme) {
   check(await page.locator(".m-hall").count() === 5, "地图上有 5 个食堂");
   await page.locator('.m-hall[data-hall="rhetas-market"] .pin').click();
   await page.waitForSelector("#mapCard:not([hidden])");
+  await page.waitForTimeout(600); // 等卡片弹出的动画结束再量
   const dishes = await page.locator("#mapCard li b").allInnerTexts();
   check(dishes.length > 0, `点 Rheta's 显示硬菜：${dishes.join("、")}`);
   const inside = await page.evaluate(() => { const b = document.querySelector("#mapBox").getBoundingClientRect(), c = document.querySelector("#mapCard").getBoundingClientRect(); return c.left >= b.left - 1 && c.right <= b.right + 1; });
