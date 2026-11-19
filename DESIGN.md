@@ -35,6 +35,21 @@ typography:
     fontWeight: 700
     lineHeight: 1.12
     letterSpacing: "-0.01em"
+  heading:
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, PingFang SC, Hiragino Sans GB, Noto Sans SC, Microsoft YaHei, system-ui, sans-serif"
+    fontSize: "22px"
+    fontWeight: 700
+    lineHeight: 1.2
+  title-lg:
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, PingFang SC, Hiragino Sans GB, Noto Sans SC, Microsoft YaHei, system-ui, sans-serif"
+    fontSize: "16px"
+    fontWeight: 700
+    lineHeight: 1.45
+  brand:
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, PingFang SC, Hiragino Sans GB, Noto Sans SC, Microsoft YaHei, system-ui, sans-serif"
+    fontSize: "17px"
+    fontWeight: 700
+    lineHeight: 1.45
   title:
     fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, PingFang SC, Hiragino Sans GB, Noto Sans SC, Microsoft YaHei, system-ui, sans-serif"
     fontSize: "15px"
@@ -45,14 +60,50 @@ typography:
     fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.45
+  control:
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, PingFang SC, Hiragino Sans GB, Noto Sans SC, Microsoft YaHei, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 600
+    lineHeight: 1.45
+  caption:
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, PingFang SC, Hiragino Sans GB, Noto Sans SC, Microsoft YaHei, system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 400
+    lineHeight: 1.45
   sub:
     fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, PingFang SC, Hiragino Sans GB, Noto Sans SC, Microsoft YaHei, system-ui, sans-serif"
     fontSize: "12.5px"
     fontWeight: 400
     lineHeight: 1.45
+  sub-sm:
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, PingFang SC, Hiragino Sans GB, Noto Sans SC, Microsoft YaHei, system-ui, sans-serif"
+    fontSize: "12px"
+    fontWeight: 400
+    lineHeight: 1.45
+  micro:
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, PingFang SC, Hiragino Sans GB, Noto Sans SC, Microsoft YaHei, system-ui, sans-serif"
+    fontSize: "11px"
+    fontWeight: 400
+    lineHeight: 1.45
+  map-label:
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, PingFang SC, Hiragino Sans GB, Noto Sans SC, Microsoft YaHei, system-ui, sans-serif"
+    fontSize: "18px"
+    fontWeight: 700
+  map-lake:
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, PingFang SC, Hiragino Sans GB, Noto Sans SC, Microsoft YaHei, system-ui, sans-serif"
+    fontSize: "19px"
+    fontWeight: 600
+    letterSpacing: "0.08em"
   figure:
     fontFamily: "Martian Mono, ui-monospace, SFMono-Regular, Menlo, monospace"
     fontSize: "15px"
+    fontWeight: 600
+    letterSpacing: "-0.02em"
+    fontFeature: "'tnum' 1"
+    fontVariation: "'wdth' 87.5"
+  figure-lg:
+    fontFamily: "Martian Mono, ui-monospace, SFMono-Regular, Menlo, monospace"
+    fontSize: "17px"
     fontWeight: 600
     letterSpacing: "-0.02em"
     fontFeature: "'tnum' 1"
@@ -191,13 +242,23 @@ A near-monochrome thermal palette of warm-neutral greys with one rationed red; e
 **Character:** A printer's monospace for anything a receipt printer would print as a number (codes, calories, dates, times, counts), and the phone's own CJK sans for words. The mono is condensed and tightly tracked so it reads as thermal print rather than code.
 
 ### Hierarchy
+The whole ramp is 72 / 25 / 22 / 17 / 16 / 15 / 14 / 13 / 12.5 / 12 / 11.5 / 11px, plus the two map sizes below. Anything else is drift.
 - **Display** (Martian Mono 800, 72px, line-height 0.9, -0.05em): the pickup code on the ticket, once per screen.
-- **Headline** (sans 700, 25px, 1.12): the ticket's "今晚去 / hall name"; the menu receipt heading runs one step down at 22px/1.2.
-- **Title** (sans 700, 15px): receipt section heads (ranking, map), station headings flanked by dashed rules.
+- **Headline** (sans 700, 25px, 1.12): the ticket's "今晚去 / hall name".
+- **Heading** (sans 700, 22px, 1.2): the menu receipt heading ("Gordon Avenue Market 菜单").
+- **Brand** (sans 700, 17px): the "UW 食堂小票" wordmark in the top bar, and the empty-state line between dashed rules.
+- **Title Large** (sans 700, 16px): the reversed header of 这一餐的硬菜 and the 搭配建议 header, the dish rows inside 这一餐的硬菜, and the red 就去这家 button.
+- **Title** (sans 700, 15px): receipt section heads (ranking, map), station headings flanked by dashed rules, the map card hall name.
 - **Body** (sans 400–600, 15px, 1.45): every menu row and dish name; dish names at 600. Menu rows all run on this one size.
-- **Sub** (sans 400, 12.5px): the English original, station, allergens under each dish; 12px on the ticket and map card.
-- **Figure** (Martian Mono 600, 15px, tabular, -0.02em): calories, ranking counts, totals; date numerals at 17px/600.
-- **Label Mono** (Martian Mono 400, 11.5px, faded): print timestamps, meta lines, summaries, hints, hall codes inside chips.
+- **Control** (sans 600, 14px): box buttons, hall buttons, filter chips; also the ticket greeting, the stamp text and the 搭配建议 tip (700).
+- **Caption** (sans 400, 13px): the toast, empty-state hints, the map card body, the ticket total line.
+- **Sub** (sans 400, 12.5px): the English original, station, allergens under each dish; the ranking's top-dish line; the footer.
+- **Sub Small** (sans 400, 12px): the same sublines where space is tighter: the ticket, the map card, combo rows, the 推荐 label, the combo role boxes.
+- **Micro** (11px, faded): units (千卡), weekday labels in the date strip, meter reference ranges, the ranking column label.
+- **Figure** (Martian Mono 600, 15px, tabular, -0.02em): calories, ranking counts, totals.
+- **Figure Large** (Martian Mono 600, 17px, tabular): date numerals in the strip, calories in 这一餐的硬菜, the map pin codes (800).
+- **Label Mono** (Martian Mono 400, 11.5px, faded): print timestamps, meta lines, summaries, hints, hall codes inside chips, tags, small notes.
+- **Map Label / Map Lake** (sans 700 18px / 600 19px): hall names and the lake name inside the map SVG. These are viewBox units, so they scale with the map's width rather than staying at a fixed pixel size.
 
 ### Named Rules
 **The Printed Figure Rule.** Every number, code, date and time is set in Martian Mono with tabular figures. Words never are.
