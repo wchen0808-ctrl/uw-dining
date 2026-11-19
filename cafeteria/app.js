@@ -2,6 +2,7 @@
 (() => {
   // 动效层（fx.js）没加载到也不影响功能
   const FX = window.FX || new Proxy({}, { get: () => () => {} });
+  if (!window.FX) document.documentElement.classList.remove("intro-on");
   const MEALS = ["breakfast", "lunch", "dinner"];
   const MEAL_ZH = { breakfast: "早餐", lunch: "午餐", dinner: "晚餐" };
   const WEEK_ZH = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -488,6 +489,11 @@
   const barH = () => $(".bar").offsetHeight;
   window.addEventListener("scroll", () => headEl.classList.toggle("stuck", window.scrollY > barH()), { passive: true });
 
+  // ---------- 开场动画：等第一次算出推荐再把取餐单端上来 ----------
+  let introResolve;
+  const introData = new Promise((r) => (introResolve = r));
+  FX.intro(introData, (played) => { if (played && !el.chef.hidden) FX.ticketIn(el.chef, { first: true }); });
+
   // ---------- 奶娃大厨的取餐单 + 各食堂硬菜排行 ----------
   const CHEF_HELLO = {
     breakfast: ["早上好呀，先吃早饭！", "起床啦，早饭要吃饱～", "今天也元气满满！"],
@@ -540,6 +546,10 @@
         <div class="t-foot m">${best.picks.length} 个窗口有硬菜${second ? ` · 备选 ${state.codes[second.h.slug]} ${esc(shortHall(second.h.name))}` : ""}</div>
         <button type="button" class="chef-go" data-hall="${esc(best.h.slug)}" data-date="${plan.date}" data-meal="${plan.meal}">就去这家 ${ARROW}</button>`;
     }
+    introResolve(ranked.length ? {
+      code: state.codes[ranked[0].h.slug], when: `${when}去`, hall: ranked[0].h.name,
+      dishes: ranked[0].picks.slice(0, 3).map((p) => ({ name: p.it.zh || p.it.n, cal: p.it.cal })),
+    } : { empty: true, when: `${when}${MEAL_ZH[plan.meal]}` });
     const box = el.chef;
     if (renderChef.html !== html || box.hidden) {
       const first = box.hidden;
@@ -641,6 +651,7 @@
       state.halls = h.halls || [];
     } catch {
       el.menu.innerHTML = emptyHTML("加载失败", "检查一下网络，然后刷新页面");
+      introResolve(null);
       return;
     }
     // 取餐号：首字母 + 序号（C1 Carson's … R5 Rheta's），小票、排行、地图、菜单都用同一个

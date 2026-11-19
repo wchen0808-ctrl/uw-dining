@@ -6,6 +6,7 @@
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const noop = () => {};
   if (!M || reduce) {
+    document.documentElement.classList.remove("intro-on");
     window.FX = new Proxy({}, { get: () => noop });
     return;
   }
@@ -120,5 +121,123 @@
     }),
 
     toastIn: safe((t) => animate(t, { opacity: [0, 1], y: [20, 0], scale: [0.9, 1] }, bouncy)),
+
+    // 开场：功夫奶娃飞踢进场 → 落地扎马步把盘子端上来 → 取餐单升起、红章拍下 → 整屏像小票一样撕走
+    intro: (dataP, done) => runIntro(dataP, done),
   };
+
+  function runIntro(dataP, done) {
+    const root = document.documentElement;
+    const box = document.getElementById("intro");
+    if (!box || !root.classList.contains("intro-on")) { done && done(false); return; }
+    const $ = (s) => box.querySelector(s);
+    const stage = $(".in-stage"), kick = $(".in-kick"), serve = $(".in-serve"), sun = $(".in-sun"),
+      rays = $(".in-rays"), hey = $(".in-hey"), ticket = $(".in-ticket"), tap = $(".in-tap");
+    const ghosts = [...box.querySelectorAll(".in-ghost")], dust = [...box.querySelectorAll(".in-dust i")];
+    const wait = (s) => new Promise((r) => setTimeout(r, s * 1000));
+    const live = [];
+    const A = (...a) => { try { const c = animate(...a); live.push(c); return c; } catch (e) { return null; } };
+    let skipped = false, finished = false;
+
+    const finish = async (fast) => {
+      if (finished) return; finished = true;
+      clearTimeout(guard);
+      try {
+        // 整屏往上撕走，底边是锯齿
+        await animate(box, { y: ["0%", "-104%"] }, { duration: fast ? 0.32 : 0.55, ease: [0.7, 0, 0.84, 0] });
+      } catch (e) { /* 忽略 */ }
+      live.forEach((c) => { try { c.stop(); } catch (e) {} });
+      root.classList.remove("intro-on");
+      box.remove();
+      done && done(true);
+    };
+    const skip = () => { if (!skipped) { skipped = true; finish(true); } };
+    box.addEventListener("click", skip);
+    const onKey = (e) => { if (["Escape", "Enter", " "].includes(e.key)) { document.removeEventListener("keydown", onKey); skip(); } };
+    document.addEventListener("keydown", onKey);
+    const guard = setTimeout(() => finish(true), 9000); // 不管出什么问题，9 秒后一定让出页面
+
+    const shake = (el, px) => A(el, { x: [0, -px, px, -px * 0.6, px * 0.4, 0], y: [0, px * 0.5, -px * 0.4, px * 0.3, 0, 0] }, { duration: 0.32 });
+
+    (async () => {
+      // 1. 红日升起，背景速度线转起来
+      A(sun, { scale: [0, 1], opacity: [0, 1] }, { type: "spring", stiffness: 160, damping: 18 });
+      A(rays, { rotate: [0, 40] }, { duration: 6, ease: "linear" });
+      A(rays, { opacity: [0, 1] }, { duration: 0.4 });
+      await wait(0.18); if (skipped) return;
+
+      // 2. 飞踢：从左上角斜着冲进来，后面拖两个残影
+      const path = { x: ["-115vw", "0vw"], y: ["-34vh", "0vh"], rotate: [-28, -6], opacity: [1, 1] };
+      A(kick, path, { duration: 0.46, ease: [0.12, 0.9, 0.24, 1] });
+      ghosts.forEach((g, i) => A(g, { ...path, opacity: [0.5 - i * 0.18, 0] }, { duration: 0.46 + 0.1 * (i + 1), delay: 0.04 * (i + 1), ease: [0.12, 0.9, 0.24, 1] }));
+      await wait(0.42); if (skipped) return;
+
+      // 3. 落地：嘿哈！震一下，换成扎马步端盘子的姿势，地上扬起灰
+      A(hey, { scale: [3, 1], opacity: [0, 1], rotate: [-18, -8] }, { type: "spring", stiffness: 600, damping: 18 });
+      A(rays, { scale: [1.25, 1] }, { duration: 0.4, ease: "easeOut" });
+      shake(stage, 10);
+      A(kick, { opacity: [1, 0], scale: [1, 1.08] }, { duration: 0.16 });
+      A(serve, { opacity: [0, 1], y: [-60, 0], scaleY: [1.12, 1], scaleX: [0.92, 1] }, { type: "spring", stiffness: 520, damping: 15 });
+      dust.forEach((d, i) => {
+        const a = (i / dust.length) * Math.PI - Math.PI, r = 90 + (i % 3) * 30;
+        A(d, { x: [0, Math.cos(a) * r * 1.6], y: [0, Math.sin(a) * r * 0.45], scale: [0.4, 1.4], opacity: [0.9, 0] }, { duration: 0.7, ease: "easeOut" });
+      });
+      await wait(0.5); if (skipped) return;
+      A(hey, { opacity: 0, y: -24, scale: 0.8 }, { duration: 0.35, delay: 0.5 });
+      // 端着盘子轻轻颠
+      A(serve, { y: [0, -8, 0] }, { duration: 0.9, repeat: Infinity, ease: "easeInOut", delay: 0.2 });
+
+      // 4. 取餐单端上来（等数据，最多 2.5 秒）
+      const data = await Promise.race([dataP, wait(2.5).then(() => null)]).catch(() => null);
+      if (skipped) return;
+      fillTicket(box, data);
+      A(ticket, { y: ["100vh", "0vh"] }, { type: "spring", stiffness: 260, damping: 24 });
+      const code = $(".in-code");
+      if (code && data && data.code) scramble(code, data.code, 0.5);
+      A(box.querySelectorAll(".in-ticket .in-when, .in-ticket .in-hall, .in-ticket li, .in-ticket .in-foot"),
+        { opacity: [0, 1], y: [10, 0] }, { delay: stagger(0.08, { startDelay: 0.25 }), duration: 0.32 });
+      A(tap, { opacity: [0, 1] }, { duration: 0.4, delay: 0.6 });
+      await wait(0.85); if (skipped) return;
+
+      // 5. 盖章：啪！
+      if (data && !data.empty) {
+        A($(".in-stamp"), { scale: [3.2, 1], opacity: [0, 0.94], rotate: [-40, -14] }, { type: "spring", stiffness: 700, damping: 20 });
+        await wait(0.12);
+        shake(ticket, 6); shake(stage, 4);
+      }
+      await wait(1.15);
+      finish(false);
+    })();
+  }
+
+  // 取餐号像打印机一样先乱跳几下再定住
+  function scramble(el, final, secs) {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
+    const t0 = performance.now();
+    const tick = () => {
+      const p = (performance.now() - t0) / (secs * 1000);
+      if (p >= 1 || !el.isConnected) { el.textContent = final; return; }
+      el.textContent = [...final].map((c, i) => (p > (i + 1) / (final.length + 1) ? c : chars[(Math.random() * chars.length) | 0])).join("");
+      requestAnimationFrame(tick);
+    };
+    tick();
+  }
+
+  function fillTicket(box, d) {
+    const t = box.querySelector(".in-ticket");
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const now = new Date(), pad = (n) => String(n).padStart(2, "0");
+    const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    if (!d || d.empty) {
+      t.innerHTML = `<div class="in-head"><span>奶娃大厨 · 出餐</span><span>${time}</span></div>
+        <div class="in-when">${d ? esc(d.when) : "菜单"}</div><div class="in-hall">${d ? "菜单还没出来" : "还在路上…"}</div>
+        <p class="in-foot">先看看别的日子吧</p>`;
+      return;
+    }
+    t.innerHTML = `<div class="in-head"><span>奶娃大厨 · 取餐号</span><span>${time}</span></div>
+      <div class="in-row"><span class="in-code">${esc(d.code)}</span>
+        <div><div class="in-when">${esc(d.when)}</div><div class="in-hall">${esc(d.hall)}</div></div></div>
+      <ol class="in-dishes">${d.dishes.map((x) => `<li><span>${esc(x.name)}</span><span class="lead"></span><span class="num">${x.cal != null ? x.cal : "—"}</span></li>`).join("")}</ol>
+      <span class="in-stamp" aria-hidden="true">奶娃<br>推荐</span>`;
+  }
 })();

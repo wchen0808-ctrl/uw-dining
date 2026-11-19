@@ -42,7 +42,7 @@ async function run(browserType, deviceName, scheme) {
   const tag = `${browserType.name()}-${deviceName.replace(/\s+/g, "")}-${scheme}`;
   console.log(`\n== ${tag} ==`);
 
-  await page.goto(`${base}/cafeteria/`);
+  await page.goto(`${base}/cafeteria/?intro=0`);
   await page.waitForSelector(".station, .empty-state");
   const today = await page.evaluate(() => { const d = new Date(); return d.getDate(); });
   check(await page.locator('.dates [aria-selected="true"] .dd').innerText() == String(today), "默认选中今天");
@@ -197,7 +197,7 @@ async function desktopHover() {
   console.log("\n== chromium-desktop-hover ==");
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-  await page.goto(`${base}/cafeteria/`);
+  await page.goto(`${base}/cafeteria/?intro=0`);
   await page.waitForSelector(".station, .empty-state");
   await page.click("#mapBtn");
   await page.waitForTimeout(900);
@@ -216,6 +216,49 @@ async function desktopHover() {
   await browser.close();
 }
 
+// 开场动画：功夫奶娃端上取餐单，推荐的食堂和取餐单一致；播完或点一下就让出页面
+async function introAnim(browserType, deviceName) {
+  const tag = `intro-${browserType.name()}-${deviceName.replace(/\s+/g, "")}`;
+  console.log(`
+== ${tag} ==`);
+  const browser = await browserType.launch();
+  const ctx = await browser.newContext({ ...devices[deviceName], locale: "zh-CN", timezoneId: "America/Chicago" });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto(`${base}/cafeteria/`);
+  check(await page.locator("#intro").isVisible(), "打开就是全屏开场");
+  const box = await page.locator("#intro").boundingBox();
+  const vp = page.viewportSize();
+  check(box && box.width >= vp.width - 1 && box.height >= vp.height - 1, "开场占满整个屏幕");
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: path.join(SHOTS, `${tag}-1-kick.png`) });
+  await page.waitForSelector(".in-hall", { timeout: 5000 });
+  await page.waitForTimeout(1300);
+  await page.screenshot({ path: path.join(SHOTS, `${tag}-2-ticket.png`) });
+  const hall = await page.locator(".in-hall").innerText();
+  await page.waitForSelector("#intro", { state: "detached", timeout: 6000 });
+  check(true, "开场自动播完");
+  const h1 = await page.locator("#chef h1").innerText();
+  check(h1.replace(/\s+/g, "").includes(hall.replace(/\s+/g, "")), `开场推荐和取餐单一致：${hall}`);
+  check(await page.evaluate(() => getComputedStyle(document.body).overflowY !== "hidden"), "播完能滚动");
+  await page.reload();
+  await page.waitForTimeout(500);
+  await page.mouse.click(vp.width / 2, vp.height / 2);
+  await page.waitForSelector("#intro", { state: "detached", timeout: 1500 });
+  check(true, "点一下跳过开场");
+  await page.click('.meals [data-meal="lunch"]');
+  check(await page.locator('.meals [data-meal="lunch"]').getAttribute("aria-selected") === "true", "跳过后页面能点");
+  check(errors.length === 0, `没有页面错误${errors.length ? "：" + errors.join(" | ") : ""}`);
+  await browser.close();
+  const rm = await chromium.launch();
+  const p2 = await rm.newPage({ reducedMotion: "reduce" });
+  await p2.goto(`${base}/cafeteria/`);
+  await p2.waitForSelector(".station, .empty-state");
+  check(await p2.locator("#intro").isHidden(), "减少动态效果时不放开场");
+  await rm.close();
+}
+
 let base;
 (async () => {
   fs.mkdirSync(SHOTS, { recursive: true });
@@ -226,6 +269,9 @@ let base;
     await run(webkit, "iPhone SE", "dark");
     await run(chromium, "iPhone 15", "light"); // WebKit 驱动下 SW 支持有限，用 Chromium 测离线
     await desktopHover();
+    await introAnim(webkit, "iPhone 15");
+    await introAnim(webkit, "iPhone SE");
+    await introAnim(chromium, "Desktop Chrome");
   } finally {
     srv.close();
   }
