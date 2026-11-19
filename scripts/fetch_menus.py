@@ -2,8 +2,8 @@
 """抓取 UW–Madison Housing Dining (Nutrislice) 接下来 14 天的菜单。
 
 只用标准库。输出：
-  cafeteria/data/halls.json         食堂列表
-  cafeteria/data/YYYY-MM-DD.json    每天的菜单
+  data/halls.json         食堂列表
+  data/YYYY-MM-DD.json    每天的菜单
 只有内容变化时才改写文件（避免无意义的提交）。
 """
 import datetime as dt
@@ -21,7 +21,7 @@ MEALS = ["breakfast", "lunch", "dinner"]
 DAYS_AHEAD = 14
 KEEP_PAST_DAYS = 7
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "cafeteria", "data")
+OUT = os.path.join(ROOT, "data")
 DIET_TAGS = {"Vegan", "Vegetarian", "Halal", "Top 9 Free"}
 DROP_TAGS = {"Disclaimer"}
 # 中文菜名：先查人工词典，查不到再机器翻译并缓存（只翻译一次）

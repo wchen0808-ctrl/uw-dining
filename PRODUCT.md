@@ -22,7 +22,7 @@ The official Nutrislice menu is English-only and organised per hall. This app re
 
 - Five dining halls: Carson's Market, Four Lakes Market, Gordon Avenue Market, Liz's Market, Rheta's Market.
 - Meals: breakfast, lunch, dinner; the app picks the current meal by time of day (before 10:30, before 14:30, then dinner; after 20:30 it points at tomorrow's breakfast).
-- Menus for today plus 13 days ahead are fetched twice a day by a GitHub Action into static JSON (`cafeteria/data/`); the site is static on GitHub Pages and works offline as a PWA.
+- Menus for today plus 13 days ahead are fetched twice a day by a GitHub Action into static JSON (`data/`); the site is static on GitHub Pages and works offline as a PWA.
 - Used one-handed on a phone; swipe left/right on the menu changes the day.
 
 ## Capabilities and Constraints
@@ -36,12 +36,12 @@ The official Nutrislice menu is English-only and organised per hall. This app re
 ## Brand Commitments
 
 - Tone: cute and playful (confirmed by the owner), not a dry utility.
-- Existing assets: the 奶娃大厨 mascot (`cafeteria/icons/naiwa-chef.png`, a yellow egg chef generated with Gemini from the owner's reference) and UW red `#c5050c` from the original brief. The owner did not mark either as untouchable in the redesign interview; both are available, neither is mandatory.
+- Existing assets: the 奶娃大厨 mascot (`icons/naiwa-chef.png`, a yellow egg chef generated with Gemini from the owner's reference) and UW red `#c5050c` from the original brief. The owner did not mark either as untouchable in the redesign interview; both are available, neither is mandatory.
 - Interface language: Simplified Chinese; dish names bilingual.
 
 ## Evidence on Hand
 
-- Real menu data in `cafeteria/data/*.json` (dish names, Chinese translations, calories, diet tags, allergens, stations, hall coordinates).
+- Real menu data in `data/*.json` (dish names, Chinese translations, calories, diet tags, allergens, stations, hall coordinates).
 - Mascot image and its original in `assets/naiwa-chef-original.jpg`.
 - No reviews, user counts or endorsements exist; do not invent any. Not affiliated with UW–Madison.
 

@@ -1,5 +1,7 @@
 # UW 食堂菜单（PWA）
 
+网址：https://wchen0808-ctrl.github.io/uw-dining/
+
 一个中文手机网页，用来查看 UW–Madison 五个学校食堂（Carson's、Four Lakes、Gordon Avenue、Liz's、Rheta's）每天的菜单。可以添加到手机主屏幕，像 App 一样使用，没网时也能看已经打开过的菜单。
 
 ## 功能
@@ -13,7 +15,7 @@
 - 食堂地图：点右上角“地图”，在手绘的校园示意图上标出 5 个食堂；电脑上鼠标悬停、手机上点一下，就会显示这一餐的硬菜（主菜，肉菜优先，每个窗口最多一道），点卡片按钮直接看该食堂完整菜单
 - 开场动画：每次打开网页，整屏先放一段功夫奶娃出场——红日背景下飞踢进场、“嘿哈！”落地扎马步，把餐盘举起来，取餐单从下面升上来，取餐号像打印机一样跳出来，列出推荐食堂和三道硬菜，最后“奶娃推荐”红章拍下去，整屏像小票一样往上撕走。大约 4 秒，点任意处或按 Esc 直接跳过；系统开了“减少动态效果”时不放。网址加 `?intro=0` 也可以关掉（测试用）
 - 奶娃大厨：按现在的时间判断是早餐、午餐还是晚餐（20:30 以后推荐明天早餐），比较各食堂这一餐的硬菜，告诉你最好去哪家吃；会参考你开着的筛选（比如清真）。点 × 关掉后，这一餐不再出现
-- 动效：用 [Motion](https://motion.dev) 做的弹簧动画（换天滑动、卡片依次浮现、餐次白条滑动、图钉掉落、奶娃大厨蹦出来），库文件放在 `cafeteria/vendor/`，没网也能用；系统开了“减少动态效果”时自动关闭
+- 动效：用 [Motion](https://motion.dev) 做的弹簧动画（换天滑动、卡片依次浮现、餐次白条滑动、图钉掉落、奶娃大厨蹦出来），库文件放在 `vendor/`，没网也能用；系统开了“减少动态效果”时自动关闭
 - 选了食堂以后，菜单最上面先列出这一餐的硬菜（列表里也打上“硬菜”标签，点一下跳过去），下面是“搭配建议”：一份蛋白质 + 一份主食 + 一份蔬果，标出合计热量、蛋白质、碳水和膳食纤维，和一般成人一餐的参考范围对比（每天约 2000 千卡、三餐平分，只作参考）。菜单数据里没有维生素含量，所以用“一份蔬菜或水果”来保证维生素
 - 搜索当天所有食堂的菜，结果显示“食堂 · 餐次 · 窗口”
 - PWA：manifest + service worker（网络优先，没网时用缓存），支持深色模式，主色 UW 红 `#c5050c`
@@ -21,11 +23,11 @@
 ## 目录结构
 
 ```
-index.html                     根目录跳转到 cafeteria/
-cafeteria/                     网页本体
-  index.html  app.js  style.css  sw.js  manifest.webmanifest  icons/
-  data/halls.json              食堂列表
-  data/YYYY-MM-DD.json         每天的菜单（今天起 14 天，保留过去 7 天）
+index.html  app.js  fx.js  style.css  sw.js  manifest.webmanifest
+icons/  fonts/  vendor/        网页本体（放在仓库根目录，网址就是 Pages 的根地址）
+data/halls.json                食堂列表
+data/YYYY-MM-DD.json           每天的菜单（今天起 14 天，保留过去 7 天）
+cafeteria/                     旧网址，跳转到新网址并清掉旧的离线缓存
 scripts/fetch_menus.py         抓取脚本（只用 Python 标准库）
 .github/workflows/update-menus.yml   每天自动抓取两次，有变化就提交
 tests/iphone.test.cjs          Playwright iPhone 尺寸测试
@@ -58,7 +60,7 @@ python scripts/fetch_menus.py
 3. **Build and deployment** 里的 **Source** 选 **Deploy from a branch**。
 4. **Branch** 选 `main`，文件夹选 `/ (root)`，点 **Save**。
 5. 等一两分钟，页面顶部会显示网址，一般是
-   `https://<你的用户名>.github.io/<仓库名>/`，它会自动跳转到 `cafeteria/`。
+   `https://<你的用户名>.github.io/<仓库名>/`，打开就是菜单。
 
 ## 开启自动更新菜单
 

@@ -1,8 +1,8 @@
 ---
 version: 1
 slug: "cafeteria-index-html"
-primary_target: "cafeteria/index.html"
-related_targets: ["cafeteria/style.css","cafeteria/app.js"]
+primary_target: "index.html"
+related_targets: ["style.css","app.js"]
 ---
 
 # 食堂菜单 (cafeteria/) surface brief

@@ -42,7 +42,7 @@ async function run(browserType, deviceName, scheme) {
   const tag = `${browserType.name()}-${deviceName.replace(/\s+/g, "")}-${scheme}`;
   console.log(`\n== ${tag} ==`);
 
-  await page.goto(`${base}/cafeteria/?intro=0`);
+  await page.goto(`${base}/?intro=0`);
   await page.waitForSelector(".station, .empty-state");
   const today = await page.evaluate(() => { const d = new Date(); return d.getDate(); });
   check(await page.locator('.dates [aria-selected="true"] .dd').innerText() == String(today), "默认选中今天");
@@ -197,7 +197,7 @@ async function desktopHover() {
   console.log("\n== chromium-desktop-hover ==");
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-  await page.goto(`${base}/cafeteria/?intro=0`);
+  await page.goto(`${base}/?intro=0`);
   await page.waitForSelector(".station, .empty-state");
   await page.click("#mapBtn");
   await page.waitForTimeout(900);
@@ -213,6 +213,10 @@ async function desktopHover() {
   await page.reload();
   await page.waitForSelector(".m-hall");
   check(await page.locator("#mapPanel").isVisible(), "localStorage 记住地图是打开的");
+  await page.goto(`${base}/cafeteria/?intro=0`);
+  await page.waitForURL(`${base}/?intro=0`);
+  await page.waitForSelector(".station, .empty-state");
+  check(true, "旧网址 /cafeteria/ 跳到新网址");
   await browser.close();
 }
 
@@ -226,7 +230,7 @@ async function introAnim(browserType, deviceName) {
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto(`${base}/cafeteria/`);
+  await page.goto(`${base}/`);
   check(await page.locator("#intro").isVisible(), "打开就是全屏开场");
   const box = await page.locator("#intro").boundingBox();
   const vp = page.viewportSize();
@@ -253,7 +257,7 @@ async function introAnim(browserType, deviceName) {
   await browser.close();
   const rm = await chromium.launch();
   const p2 = await rm.newPage({ reducedMotion: "reduce" });
-  await p2.goto(`${base}/cafeteria/`);
+  await p2.goto(`${base}/`);
   await p2.waitForSelector(".station, .empty-state");
   check(await p2.locator("#intro").isHidden(), "减少动态效果时不放开场");
   await rm.close();

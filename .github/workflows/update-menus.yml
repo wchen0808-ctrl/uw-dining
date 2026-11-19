@@ -29,7 +29,7 @@ jobs:
 
       - name: 有变化就提交
         run: |
-          git add -A cafeteria/data scripts/zh_names_auto.json 2>/dev/null || git add -A cafeteria/data
+          git add -A data scripts/zh_names_auto.json 2>/dev/null || git add -A data
           if git diff --cached --quiet; then
             echo "菜单没有变化"
             exit 0
