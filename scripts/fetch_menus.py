@@ -156,6 +156,15 @@ def parse_day(day, tr):
             entry["zh"] = zh
         if cal is not None:
             entry["cal"] = round(cal)
+        # 营养素（克，取整）：蛋白质 p、碳水 c、脂肪 f、膳食纤维 fb；用于“搭配建议”
+        nut = food.get("rounded_nutrition_info") or {}
+        for key, src in (("p", "g_protein"), ("c", "g_carbs"), ("f", "g_fat"), ("fb", "g_fiber")):
+            v = nut.get(src)
+            if v is not None:
+                entry[key] = round(v)
+        cat = food.get("food_category")
+        if cat in ("vegetable", "fruit", "grain", "side", "dessert", "condiment", "beverage"):
+            entry["k"] = cat
         diet = [i for i in icons if i in DIET_TAGS]
         alg = [i for i in icons if i not in DIET_TAGS]
         if diet:

@@ -175,7 +175,7 @@
           <span class="sub">窗口 · ${esc(p.st)}${p.it.zh ? ` · ${esc(p.it.n)}` : ""}</span></a></li>`).join("")}</ol>
       </section>` : "";
     el.menuMeta.textContent = `${meta} · ${state.filters.size ? `筛选后 ${shown}/${total}` : total} 道菜`;
-    el.hardSlot.innerHTML = shown ? hardBlock : "";
+    el.hardSlot.innerHTML = shown ? hardBlock + comboHTML(buildCombo(state.hall, day, state.meal), state.meal) : "";
     el.menu.innerHTML = (shown ? html : emptyHTML("没有符合筛选的菜", "把上面的筛选关掉几个试试")) +
       `<p class="hint">左右滑动换一天</p>`;
   }
@@ -254,6 +254,89 @@
       if (top) best.push({ it: top, st: st.name, score: topScore });
     }
     return best.sort((a, b) => b.score - a.score).slice(0, n);
+  }
+
+  // ---------- 搭配建议：一份蛋白质 + 一份主食 + 一份蔬果 ----------
+  // 参考值：一般成人每天约 2000 千卡、三餐平分（早餐略少）；只作参考，不是医疗建议
+  const MEAL_REF = {
+    breakfast: { kcal: [400, 650], p: 20, c: [50, 85], fb: 6 },
+    lunch: { kcal: [550, 850], p: 25, c: [60, 110], fb: 8 },
+    dinner: { kcal: [550, 850], p: 25, c: [60, 110], fb: 8 },
+  };
+  const NOT_FOOD = /\b(sauce|gravy|dressing|condiment|syrup|salsa|guacamole|sour cream|cheese sauce|build your own|bar$)\b/i;
+  const CARB = /\b(rice|pasta|noodles?|lo mein|yakisoba|spaghetti|rotini|potato(es)?|fries|tots|hashbrowns?|bread|roll|bun|naan|tortilla|quinoa|couscous|bulgur|barley|grits|oatmeal|biscuit|bagel|pancakes?|waffle|toast|spaetzle|wheat berries|grains?)\b/i;
+  const PLANT = /\b(broccoli|carrots?|beans?|spinach|kale|salad|vegetables?|veggies?|squash|zucchini|cauliflower|brussels?|asparagus|greens|chard|peas|cabbage|tomato(es)?|cucumber|edamame|eggplant|okra|mushrooms?|peppers?|fruit|melon|grapes|berries|blueberries|strawberries|apple|banana|pineapple|mango|orange|cantaloupe|honeydew|watermelon|ratatouille|jicama|rabe)\b/i;
+  const VEG = /\b(broccoli|carrots?|green beans|spinach|kale|vegetables?|veggies?|squash|zucchini|cauliflower|brussels?|asparagus|greens|chard|peas|cabbage|cucumber|eggplant|okra|mushrooms?|ratatouille|jicama|rabe)\b/i;
+  const NOT_PLANT = /\b(tuna|egg|eggs|hummus|dip|chili|pizza|sandwich|soup|pie|burger)\b/i;
+  const PROTEIN_VEG = /\b(tofu|tempeh|seitan|beans?|lentils?|chickpeas?|egg|eggs|falafel|edamame|yogurt)\b/i;
+  const n0 = (v) => v || 0;
+  function buildCombo(hallSlug, day, meal) {
+    const stations = (((day || {}).halls || {})[hallSlug] || {})[meal] || [];
+    const pool = [];
+    for (const st of stations) for (const it of st.items) {
+      if (it.cal == null || it.p == null || !passes(it) || NOT_FOOD.test(it.n) || it.k === "dessert" || it.k === "condiment") continue;
+      pool.push({ it, st: st.name });
+    }
+    const pick = (cands, score) => cands.map((x) => ({ ...x, s: score(x.it) })).sort((a, b) => b.s - a.s);
+    const minP = meal === "breakfast" ? 10 : 15;
+    const proteinLike = ({ it }) => (it.m || MEAT.test(it.n) || PROTEIN_VEG.test(it.n)) && it.cal <= 700;
+    const proteinScore = (it) => it.p + 30 * (it.p * 4) / Math.max(it.cal, 60);
+    let proteins = pick(pool.filter((x) => x.it.p >= minP && proteinLike(x)), proteinScore);
+    // 实在没有达标的（比如早餐只有松饼），退一步挑蛋白质最多的
+    if (!proteins.length) proteins = pick(pool.filter((x) => x.it.p >= 6 && proteinLike(x)), (it) => it.p);
+    const carbs = pick(pool.filter(({ it }) => n0(it.c) >= 18 && (!it.m || meal === "breakfast") && (CARB.test(it.n) || it.k === "grain") && n0(it.p) * 2 < n0(it.c)),
+      (it) => n0(it.c) / 10 + n0(it.fb) * 1.5 - n0(it.f) / 3);
+    const plants = pick(pool.filter(({ it }) => (it.k === "vegetable" || it.k === "fruit" || PLANT.test(it.n)) && it.cal >= 25 && it.cal <= 220
+        && n0(it.p) < 12 && !CARB.test(it.n) && !MEAT.test(it.n) && !NOT_PLANT.test(it.n)),
+      // 蔬菜优先于水果（份量更像一份配菜，维生素和纤维也更稳）
+      (it) => n0(it.fb) * 2 + (it.k === "vegetable" || VEG.test(it.n) ? 4 : 0) + Math.min(it.cal, 150) / 75);
+    const pro = proteins[0];
+    if (!pro) return null;
+    const veg = plants.find((x) => x.it !== pro.it) || null;
+    const ref = MEAL_REF[meal];
+    // 主食：优先让总热量落在参考区间里（区间内挑分最高的）；做不到就挑最接近区间中点的
+    const used = new Set([pro.it, veg && veg.it]);
+    const carbOk = carbs.filter((x) => !used.has(x.it));
+    const base = pro.it.cal + (veg ? veg.it.cal : 0);
+    const mid = (ref.kcal[0] + ref.kcal[1]) / 2;
+    const carb = carbOk.find((x) => base + x.it.cal >= ref.kcal[0] && base + x.it.cal <= ref.kcal[1])
+      || carbOk.slice().sort((a, b) => Math.abs(base + a.it.cal - mid) - Math.abs(base + b.it.cal - mid))[0] || null;
+    const parts = [pro, carb, veg].filter(Boolean);
+    const sum = (k) => parts.reduce((s, x) => s + n0(x.it[k]), 0);
+    return { pro, carb, veg, ref, kcal: sum("cal"), p: sum("p"), c: sum("c"), f: sum("f"), fb: sum("fb") };
+  }
+  function comboHTML(combo, meal) {
+    if (!combo) return "";
+    const { ref } = combo;
+    const row = (label, x, none) => x
+      ? `<li><span class="role">${label}</span><a href="#" data-find="${esc(x.it.n)}" class="dish">
+          <span class="line"><span class="name">${esc(x.it.zh || x.it.n)}</span><span class="lead"></span>${calHTML(x.it)}</span>
+          <span class="sub">蛋白质 ${n0(x.it.p)}g · 碳水 ${n0(x.it.c)}g · 纤维 ${n0(x.it.fb)}g</span></a></li>`
+      : `<li><span class="role">${label}</span><span class="dish none">${none}</span></li>`;
+    const meter = (label, val, unit, lo, hi) => {
+      const max = (hi || lo) * 1.5, pct = Math.min(100, (val / max) * 100);
+      const ok = hi ? val >= lo && val <= hi : val >= lo;
+      const range = hi ? `${lo}–${hi}` : `≥${lo}`;
+      return `<div class="meter${ok ? " ok" : ""}"><span class="mlabel">${label}</span>
+        <span class="track"><span class="band" style="left:${(lo / max * 100).toFixed(0)}%;width:${(((hi || max) - lo) / max * 100).toFixed(0)}%"></span>
+          <span class="fill" style="width:${pct.toFixed(0)}%"></span></span>
+        <span class="mval m">${val}${unit}</span><span class="mref m">${range}</span></div>`;
+    };
+    const tip = combo.kcal > ref.kcal[1] ? "热量偏高：主食吃半份，或者换成蔬菜" :
+      combo.kcal < ref.kcal[0] ? "热量偏低：可以再加一份主食或水果" :
+      combo.p < ref.p ? "蛋白质偏少：再加个鸡蛋或一份豆制品" : "这样搭配比较均衡";
+    return `<section class="combo" aria-labelledby="comboTitle">
+      <h3 id="comboTitle"><span>搭配建议</span><span class="m">${MEAL_ZH[meal]} · 一荤一主一蔬果</span></h3>
+      <ol>${row("蛋白质", combo.pro)}${row("主食", combo.carb, "这一餐没有合适的主食")}${row("蔬果", combo.veg, "这一餐没有蔬菜水果，记得另外补")}</ol>
+      <div class="meters">
+        ${meter("热量", combo.kcal, "", ref.kcal[0], ref.kcal[1])}
+        ${meter("蛋白质", combo.p, "g", ref.p)}
+        ${meter("碳水", combo.c, "g", ref.c[0], ref.c[1])}
+        ${meter("纤维", combo.fb, "g", ref.fb)}
+      </div>
+      <p class="combo-tip">${tip}</p>
+      <p class="combo-note">参考值按一般成人每天约 2000 千卡、三餐平分估算，只供参考。菜单数据里没有维生素含量，所以用“一份蔬菜或水果”来保证维生素。</p>
+    </section>`;
   }
 
   // ---------- 地图 ----------
@@ -523,11 +606,13 @@
   el.q.addEventListener("keydown", (e) => { if (e.key === "Enter") el.q.blur(); });
   el.clearQ.addEventListener("click", () => { el.q.value = ""; el.clearQ.hidden = true; state.q = ""; render(); el.q.focus(); });
 
-  // 点硬菜：滚到列表里那道菜，闪一下
+  // 点硬菜或搭配里的菜：滚到列表里那道菜，闪一下
   el.hardSlot.addEventListener("click", (e) => {
-    const a = e.target.closest("[data-jump]"); if (!a) return;
+    const a = e.target.closest("[data-jump], [data-find]"); if (!a) return;
     e.preventDefault();
-    const target = document.getElementById(a.dataset.jump); if (!target) return;
+    const target = a.dataset.jump ? document.getElementById(a.dataset.jump)
+      : [...el.menu.querySelectorAll(".item")].find((x) => x.querySelector(".en") ? x.querySelector(".en").textContent === a.dataset.find : x.querySelector(".name").textContent === a.dataset.find);
+    if (!target) return;
     target.scrollIntoView({ behavior: "smooth", block: "center" });
     target.classList.remove("flash"); void target.offsetWidth; target.classList.add("flash");
   });

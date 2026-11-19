@@ -248,6 +248,31 @@ svg { flex: none; }
 .hard-block .sub { display: block; font-size: 12.5px; color: var(--fade); margin-top: 1px; }
 .hard-block a:hover .name { text-decoration: underline; text-underline-offset: 3px; }
 .tag.hard { border-color: var(--stamp); color: var(--stamp); }
+
+/* 搭配建议：虚线框的配餐小票，三行菜 + 四条营养刻度 */
+.combo { border: 2px dashed var(--ink); margin: 12px 0 2px; padding: 0 12px 12px; }
+.combo h3 { margin: 0 -12px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 16px; font-weight: 700; border-bottom: 1.5px dashed var(--rule); }
+.combo h3 .m { font-size: 11.5px; color: var(--fade); font-weight: 600; }
+.combo ol { list-style: none; margin: 0; padding: 0; }
+.combo li { display: grid; grid-template-columns: 52px 1fr; gap: 8px; align-items: start; padding: 9px 0; }
+.combo li + li { border-top: 1.5px dashed var(--dot); }
+.combo .role { font-size: 12px; font-weight: 700; border: 1.5px solid var(--ink); text-align: center; padding: 3px 0; margin-top: 1px; }
+.combo .dish { display: block; text-decoration: none; min-width: 0; }
+.combo .dish .name { font-weight: 700; }
+.combo .dish .sub { display: block; font-size: 12px; color: var(--fade); margin-top: 1px; font-variant-numeric: tabular-nums; }
+.combo .dish.none { color: var(--fade); font-size: 14px; padding-top: 2px; }
+.meters { display: grid; gap: 7px; margin-top: 8px; padding-top: 10px; border-top: 1.5px dashed var(--rule); }
+.meter { display: grid; grid-template-columns: 44px 1fr 46px 60px; gap: 8px; align-items: center; font-size: 12.5px; }
+.meter .mlabel { font-weight: 700; }
+/* 刻度：灰色块是参考范围，黑条是这份搭配的数值；落在范围里黑条加粗 */
+.meter .track { position: relative; height: 14px; border-bottom: 1.5px solid var(--ink); }
+.meter .band { position: absolute; top: 0; bottom: 0; background: var(--dot); opacity: 0.55; }
+.meter .fill { position: absolute; left: 0; top: 4px; height: 6px; background: var(--fade); }
+.meter.ok .fill { background: var(--ink); top: 3px; height: 8px; }
+.meter .mval { text-align: right; font-weight: 600; }
+.meter .mref { color: var(--fade); font-size: 11px; }
+.combo-tip { margin: 10px 0 0; font-weight: 700; font-size: 14px; }
+.combo-note { margin: 4px 0 0; font-size: 11.5px; color: var(--fade); }
 .item.flash { animation: flash 1.2s ease-out; }
 @keyframes flash { 0%, 35% { background: var(--paper-2); box-shadow: -10px 0 0 var(--paper-2), 10px 0 0 var(--paper-2); } 100% { background: transparent; box-shadow: none; } }
 @media (prefers-reduced-motion: reduce) { .item.flash { animation: none; background: var(--paper-2); } }

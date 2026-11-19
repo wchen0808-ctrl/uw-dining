@@ -80,6 +80,15 @@ async function run(browserType, deviceName, scheme) {
   await page.waitForTimeout(700);
   check(await page.evaluate(() => { const r = document.getElementById("hard-1").getBoundingClientRect(); return r.top > 0 && r.bottom < innerHeight; }), "点硬菜跳到列表里那道菜");
 
+  // 搭配建议：三行（蛋白质 / 主食 / 蔬果），合计热量等于三道菜之和
+  const combo = await page.evaluate(() => {
+    const c = document.querySelector("#hardSlot .combo"); if (!c) return null;
+    const cals = [...c.querySelectorAll(".dish .num")].map((n) => +n.textContent);
+    return { rows: c.querySelectorAll("li").length, cals, total: +c.querySelector(".meter .mval").textContent, meters: c.querySelectorAll(".meter").length };
+  });
+  check(combo && combo.rows === 3 && combo.meters === 4 && combo.cals.reduce((a, b) => a + b, 0) === combo.total,
+    `搭配建议：${combo && combo.cals.join(" + ")} = ${combo && combo.total} 千卡`);
+
   // 筛选
   const before = await page.locator(".item").count();
   await page.click('[data-f="vegan"]');
