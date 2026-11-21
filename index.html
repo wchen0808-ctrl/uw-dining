@@ -3,104 +3,119 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>UW 食堂小票</title>
-<meta name="description" content="UW–Madison 五个食堂今天吃什么：中文菜单、过敏原，奶娃大厨告诉你这一餐去哪吃">
-<meta name="theme-color" content="#e4e3de" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0f0f0f" media="(prefers-color-scheme: dark)">
+<title>UW 食堂 · 今天吃什么</title>
+<meta name="description" content="UW–Madison 五个食堂今天吃什么：中文菜单、过敏原，奶娃告诉你这一餐去哪吃">
+<meta name="theme-color" content="#e3262b">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="UW 食堂">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
-<link rel="preload" as="font" type="font/woff2" href="fonts/martian-mono-latin.woff2" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Poppins:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;900&text=%E4%B8%80%E4%BB%8A%E5%88%B0%E5%8A%A0%E5%8D%88%E5%8D%95%E5%90%88%E5%9B%BE%E5%9C%B0%E5%A0%82%E5%A4%A9%E5%A4%B1%E5%BB%BA%E6%89%BE%E6%90%9C%E6%90%AD%E6%97%A5%E6%97%A9%E6%99%9A%E6%9C%89%E6%B2%A1%E7%9A%84%E7%A1%AC%E7%AC%A6%E7%AD%9B%E8%8F%9C%E8%AE%AE%E8%B4%A5%E8%BD%BD%E8%BF%98%E8%BF%99%E9%80%89%E9%85%8D%E9%A3%9F%E9%A4%90&display=swap">
 <link rel="preload" as="image" href="icons/naiwa-chef.png">
-<link rel="preload" as="image" href="icons/naiwa-kick.webp">
-<link rel="preload" as="image" href="icons/naiwa-serve.webp">
-<link rel="stylesheet" href="style.css?v=13">
-<script>try{if(!matchMedia("(prefers-reduced-motion: reduce)").matches&&!/[?&]intro=0/.test(location.search))document.documentElement.classList.add("intro-on")}catch(e){}</script>
+<link rel="stylesheet" href="style.css?v=14">
+<script>document.documentElement.classList.add("js");try{if(!matchMedia("(prefers-reduced-motion: reduce)").matches&&!/[?&]intro=0/.test(location.search))document.documentElement.classList.add("loading")}catch(e){}</script>
 </head>
 <body>
-<div id="intro" class="intro" aria-hidden="true">
-  <div class="in-top"><span>UW 食堂小票 · 开饭</span><span class="in-skip">跳过 &rsaquo;</span></div>
-  <div class="in-stage">
-    <svg class="in-rays" viewBox="-200 -200 400 400" aria-hidden="true"><path d="M0 0 L200.0 0.0 L199.2 18.0Z"/><path d="M0 0 L193.2 51.8 L187.8 68.9Z"/><path d="M0 0 L173.2 100.0 L163.5 115.2Z"/><path d="M0 0 L141.4 141.4 L128.1 153.6Z"/><path d="M0 0 L100.0 173.2 L84.0 181.5Z"/><path d="M0 0 L51.8 193.2 L34.2 197.1Z"/><path d="M0 0 L0.0 200.0 L-18.0 199.2Z"/><path d="M0 0 L-51.8 193.2 L-68.9 187.8Z"/><path d="M0 0 L-100.0 173.2 L-115.2 163.5Z"/><path d="M0 0 L-141.4 141.4 L-153.6 128.1Z"/><path d="M0 0 L-173.2 100.0 L-181.5 84.0Z"/><path d="M0 0 L-193.2 51.8 L-197.1 34.2Z"/><path d="M0 0 L-200.0 0.0 L-199.2 -18.0Z"/><path d="M0 0 L-193.2 -51.8 L-187.8 -68.9Z"/><path d="M0 0 L-173.2 -100.0 L-163.5 -115.2Z"/><path d="M0 0 L-141.4 -141.4 L-128.1 -153.6Z"/><path d="M0 0 L-100.0 -173.2 L-84.0 -181.5Z"/><path d="M0 0 L-51.8 -193.2 L-34.2 -197.1Z"/><path d="M0 0 L-0.0 -200.0 L18.0 -199.2Z"/><path d="M0 0 L51.8 -193.2 L68.9 -187.8Z"/><path d="M0 0 L100.0 -173.2 L115.2 -163.5Z"/><path d="M0 0 L141.4 -141.4 L153.6 -128.1Z"/><path d="M0 0 L173.2 -100.0 L181.5 -84.0Z"/><path d="M0 0 L193.2 -51.8 L197.1 -34.2Z"/></svg>
-    <div class="in-sun"></div>
-    <div class="in-dust"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    <img class="in-ghost in-fig" src="icons/naiwa-kick.webp" alt="" onerror="this.src='icons/naiwa-chef.png'">
-    <img class="in-ghost in-fig" src="icons/naiwa-kick.webp" alt="" onerror="this.src='icons/naiwa-chef.png'">
-    <img class="in-kick in-fig" src="icons/naiwa-kick.webp" alt="" onerror="this.src='icons/naiwa-chef.png'">
-    <img class="in-serve in-fig" src="icons/naiwa-serve.webp" alt="" onerror="this.src='icons/naiwa-chef.png'">
-    <div class="in-hey">嘿哈！</div>
-  </div>
-  <div class="in-ticket"></div>
-  <p class="in-tap">点一下直接看菜单</p>
+<div class="grain" aria-hidden="true"></div>
+
+<div id="loader" class="loader" aria-hidden="true">
+  <img class="ld-cap" src="icons/naiwa-chef.png" alt="" width="320" height="430">
+  <span class="ld-pct"><span id="ldNum">0</span> %</span>
 </div>
-<header class="bar">
-  <div class="brand"><img src="icons/naiwa-chef.png" alt="" width="320" height="430"><span>UW 食堂小票</span></div>
-  <div class="bar-btns">
-    <button id="todayBtn" class="box-btn" type="button" hidden>回到今天</button>
-    <button id="mapBtn" class="box-btn" type="button" aria-pressed="false" aria-controls="mapPanel">地图</button>
+
+<header class="nav">
+  <a class="logo" href="#hero" aria-label="回到顶部"><span class="logo-uw">uw</span><span class="logo-zh">食堂</span></a>
+  <div class="nav-btns">
+    <button id="mapBtn" class="pill" type="button" aria-pressed="false" aria-controls="mapPanel">地图</button>
+    <button id="menuBtn" class="pill solid" type="button">看菜单</button>
   </div>
 </header>
 
-<div class="top">
-  <div class="dates-wrap">
-    <button id="prevWeek" class="week-btn" type="button" aria-label="上一周"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button>
-    <div id="dates" class="dates" role="tablist" aria-label="选择日期"></div>
-    <button id="nextWeek" class="week-btn" type="button" aria-label="下一周"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button>
+<section id="hero" class="hero" aria-labelledby="heroTitle">
+  <div class="hero-bg"></div>
+  <p class="hero-kicker">UW–Madison · 五个食堂</p>
+  <h1 id="heroTitle" class="wordmark" aria-label="UW 食堂"><span class="wm-ch">食</span><span class="wm-ch">堂</span></h1>
+  <div id="heroFloat" class="hero-float" aria-hidden="true"></div>
+  <div class="hero-copy">
+    <p id="heroWhen" class="hero-when">今天去哪吃，</p>
+    <p id="heroPick" class="hero-pick">奶娃说了算</p>
+    <button id="heroGo" class="hero-go" type="button" hidden></button>
   </div>
-  <div id="meals" class="meals" role="tablist" aria-label="选择餐次">
-    <button type="button" data-meal="breakfast">早餐</button>
-    <button type="button" data-meal="lunch">午餐</button>
-    <button type="button" data-meal="dinner">晚餐</button>
-  </div>
-</div>
+  <a class="hero-down" href="#story" aria-label="往下看各食堂"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></a>
+</section>
 
-<div class="layout">
-  <div class="side">
-    <section id="chef" class="ticket paper" hidden aria-live="polite" aria-label="奶娃大厨的取餐单"></section>
-    <section id="rank" class="rank paper" hidden aria-labelledby="rankTitle"></section>
-    <section id="mapPanel" class="map-panel paper" hidden aria-labelledby="mapTitle">
+<section id="story" class="story" aria-labelledby="storyTitle">
+  <h2 id="storyTitle" class="sr-only">各食堂这一餐的硬菜</h2>
+  <div class="stage">
+    <div id="stBg" class="st-bgs" aria-hidden="true"></div>
+    <div id="stFigs" class="st-figs" aria-hidden="true"></div>
+    <div id="stSlides" class="st-slides"></div>
+    <ol id="stDots" class="st-dots" aria-label="食堂"></ol>
+  </div>
+</section>
+
+<section id="menuSec" class="menu-sec" aria-labelledby="menuTitle">
+  <div class="menu-grid">
+    <div class="menu-panel">
+      <div class="mp-head">
+        <h2 id="menuTitle">今日菜单</h2>
+        <p id="menuMeta" class="mp-meta"></p>
+      </div>
+      <div class="top">
+        <div class="dates-wrap">
+          <button id="prevWeek" class="week-btn" type="button" aria-label="上一周"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button>
+          <div id="dates" class="dates" role="tablist" aria-label="选择日期"></div>
+          <button id="nextWeek" class="week-btn" type="button" aria-label="下一周"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button>
+        </div>
+        <div id="meals" class="meals" role="tablist" aria-label="选择餐次">
+          <button type="button" data-meal="breakfast">早餐</button>
+          <button type="button" data-meal="lunch">午餐</button>
+          <button type="button" data-meal="dinner">晚餐</button>
+        </div>
+      </div>
+      <nav id="halls" class="halls" aria-label="选择食堂"></nav>
+      <div class="tools">
+        <label class="search">
+          <input id="q" type="search" placeholder="搜今天所有食堂的菜，中英文都行" autocomplete="off" enterkeyhint="search">
+          <button id="clearQ" class="clear" type="button" aria-label="清除搜索" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8"/></svg></button>
+          <svg class="search-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+        </label>
+        <div id="filters" class="filters" aria-label="筛选">
+          <button type="button" data-f="veg" aria-pressed="false">素食</button>
+          <button type="button" data-f="vegan" aria-pressed="false">纯素</button>
+          <button type="button" data-f="halal" aria-pressed="false">清真</button>
+          <button type="button" data-f="top9" aria-pressed="false">无常见过敏原</button>
+        </div>
+        <button id="todayBtn" class="pill small" type="button" hidden>回到今天</button>
+      </div>
+    </div>
+    <div class="menu-body">
+      <div id="hardSlot"></div>
+      <main id="menu" class="menu" aria-live="polite"></main>
+    </div>
+    <aside id="mapPanel" class="map-panel" hidden aria-labelledby="mapTitle">
       <div class="map-head"><h2 id="mapTitle">食堂地图</h2><small id="mapHint">点食堂看硬菜</small></div>
       <div id="mapBox" class="map-box"></div>
       <p class="map-note">校园示意图，位置大致准确，比例仅供参考</p>
-    </section>
+    </aside>
   </div>
-
-  <section class="receipt paper" aria-labelledby="menuTitle">
-    <div class="receipt-head">
-      <h2 id="menuTitle">菜单</h2>
-      <p id="menuMeta" class="mono-meta"></p>
-    </div>
-    <nav id="halls" class="halls" aria-label="选择食堂"></nav>
-    <div id="hardSlot"></div>
-    <div class="tools">
-      <label class="search">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
-        <input id="q" type="search" placeholder="搜今天所有食堂的菜，中英文都行" autocomplete="off" enterkeyhint="search">
-        <button id="clearQ" class="clear" type="button" aria-label="清除搜索" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8"/></svg></button>
-      </label>
-      <div id="filters" class="filters" aria-label="筛选">
-        <button type="button" data-f="veg" aria-pressed="false">素食</button>
-        <button type="button" data-f="vegan" aria-pressed="false">纯素</button>
-        <button type="button" data-f="halal" aria-pressed="false">清真</button>
-        <button type="button" data-f="top9" aria-pressed="false">无常见过敏原</button>
-      </div>
-    </div>
-    <main id="menu" class="menu" aria-live="polite"></main>
-  </section>
-</div>
+</section>
 
 <footer class="foot">
+  <p class="foot-mark">食堂</p>
   <p>数据来自 <a href="https://wisc-housingdining.nutrislice.com/" target="_blank" rel="noopener">UW Housing Dining</a>（Nutrislice），每天自动更新两次。与 UW–Madison 官方无关。</p>
   <p><strong>过敏提示：</strong>过敏原与饮食标签仅供参考，可能有变动或交叉接触，请以食堂现场标注为准。</p>
 </footer>
 
 <div id="toast" class="toast" role="status" hidden></div>
 <script src="vendor/motion-14.9.0.js"></script>
-<script src="fx.js?v=13"></script>
-<script src="app.js?v=13"></script>
+<script src="fx.js?v=14"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>

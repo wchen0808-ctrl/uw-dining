@@ -2,7 +2,7 @@
 (() => {
   // 动效层（fx.js）没加载到也不影响功能
   const FX = window.FX || new Proxy({}, { get: () => () => {} });
-  if (!window.FX) document.documentElement.classList.remove("intro-on");
+  if (!window.FX) document.documentElement.classList.remove("loading");
   const MEALS = ["breakfast", "lunch", "dinner"];
   const MEAL_ZH = { breakfast: "早餐", lunch: "午餐", dinner: "晚餐" };
   const WEEK_ZH = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -33,7 +33,7 @@
     halls: $("#halls"), dates: $("#dates"), meals: $("#meals"), menu: $("#menu"),
     prev: $("#prevWeek"), next: $("#nextWeek"), today: $("#todayBtn"),
     q: $("#q"), clearQ: $("#clearQ"), filters: $("#filters"), toast: $("#toast"),
-    hardSlot: $("#hardSlot"), menuTitle: $("#menuTitle"), menuMeta: $("#menuMeta"), chef: $("#chef"), rank: $("#rank"),
+    hardSlot: $("#hardSlot"), menuTitle: $("#menuTitle"), menuMeta: $("#menuMeta"),
   };
 
   function has(it, tag) { return (it.d || []).includes(tag); }
@@ -73,7 +73,9 @@
   const state = {
     halls: [],
     codes: {},
+    colors: {},
     hall: lsGet(LS_HALL),
+    hallChosen: !!lsGet(LS_HALL),
     date: todayIso,
     meal: mealForNow(),
     filters: new Set((lsGet(LS_FILTERS) || "").split(",").filter((f) => FILTERS[f])),
@@ -150,7 +152,7 @@
     el.hardSlot.innerHTML = "";
     if (state.q) return renderSearch(day);
     const h = hallBy(state.hall);
-    el.menuTitle.textContent = h ? `${h.name} 菜单` : "菜单";
+    el.menuTitle.textContent = h ? h.name.replace(/\s*Market$/i, "") : "菜单";
     const meta = `${state.codes[state.hall] || ""} · ${dayLabel(state.date)} · ${MEAL_ZH[state.meal]}`;
     if (!day) { el.menuMeta.textContent = meta; return void (el.menu.innerHTML = emptyHTML("这一天还没有菜单", "菜单通常提前一两周公布，过几天再来看看")); }
     const stations = ((day.halls[state.hall] || {})[state.meal]) || [];
@@ -208,7 +210,12 @@
     if (token !== renderToken) return;
     renderMeals(day);
     renderMenu(day);
-    await renderChef();
+    await renderStory();
+    if (token !== renderToken) return;
+    if (!state.hallChosen && state.best && state.hall !== state.best) {
+      state.hall = state.best; renderHalls(); renderMeals(day); renderMenu(day);
+    }
+    menuSec.style.setProperty("--hc", hallColor(state.hall));
     if (state.mapOpen) renderMap(day);
     if (document.documentElement.classList.contains("has-motion")) {
       FX.menuIn(el.hardSlot, 0);
@@ -234,7 +241,7 @@
     render(n > 0 ? "slide-l" : "slide-r");
   }
   function goToMenu() {
-    requestAnimationFrame(() => $(".receipt").scrollIntoView({ behavior: "smooth", block: "start" }));
+    requestAnimationFrame(() => menuSec.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" }));
   }
 
   // ---------- 硬菜 ----------
@@ -375,7 +382,7 @@
       const [x, y] = P(h.lat, h.lng);
       const below = y < 90; // 太靠湖边的名字放到下面
       const cls = ["m-hall", h.slug === state.hall ? "current" : "", h.slug === state.best ? "best" : ""].join(" ").trim();
-      return `<g class="${cls}" data-hall="${esc(h.slug)}" tabindex="0" role="button"
+      return `<g class="${cls}" data-hall="${esc(h.slug)}" style="--pc:${hallColor(h.slug)}" tabindex="0" role="button"
           aria-label="${state.codes[h.slug]} ${esc(h.name)}，查看硬菜" transform="translate(${x},${y})">
         <circle cy="-26" r="32" fill="transparent"/>
         <g class="pin-g"><rect class="pin" x="-24" y="-46" width="48" height="32" rx="2"/>
@@ -451,7 +458,7 @@
     if (open) loadDay(state.date).then((d) => { mapDrawnFor = ""; renderMap(d); FX.mapIn($("#mapPanel")); }); else hideCard();
   }
   function selectHall(slug, { scroll = true } = {}) {
-    state.hall = slug; lsSet(LS_HALL, slug); mapDrawnFor = ""; hideCard(); render();
+    state.hall = slug; state.hallChosen = true; lsSet(LS_HALL, slug); mapDrawnFor = ""; hideCard(); render();
     if (state.mapOpen) requestAnimationFrame(() => FX.pinBounce($(`.m-hall[data-hall="${CSS.escape(slug)}"]`)));
     if (scroll) goToMenu();
   }
@@ -479,33 +486,38 @@
     if (state.mapOpen) requestAnimationFrame(() => $("#mapPanel").scrollIntoView({ behavior: "smooth", block: "start" }));
   });
 
-  // 吸顶的日期栏：记下高度给 scrollIntoView 留位置；贴顶以后加一道影子
-  const headEl = $(".top");
-  const syncHead = () => document.documentElement.style.setProperty("--head-h", headEl.offsetHeight + "px");
-  const side = $(".side");
-  const syncSide = () => side.classList.toggle("stick", window.innerWidth >= 900 && side.offsetHeight + headEl.offsetHeight + 40 < window.innerHeight);
-  syncHead(); window.addEventListener("resize", () => { syncHead(); syncSide(); });
-  new ResizeObserver(syncSide).observe(side);
-  const barH = () => $(".bar").offsetHeight;
-  window.addEventListener("scroll", () => headEl.classList.toggle("stuck", window.scrollY > barH()), { passive: true });
+  // ---------- 顶栏：滚到浅色菜单区以后换成深色字 ----------
+  const nav = $(".nav"), hero = $("#hero"), story = $("#story"), menuSec = $("#menuSec");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const HALL_COLORS = ["#d7262b", "#2a43d4", "#c8470f", "#cc2f78", "#1b8048"];
+  const RED = HALL_COLORS[0];
+  hero.style.setProperty("--hc", RED);
+  const setHC = (c) => document.documentElement.style.setProperty("--hc", c);
+  setHC(RED);
 
-  // ---------- 开场动画：等第一次算出推荐再把取餐单端上来 ----------
-  let introResolve;
-  const introData = new Promise((r) => (introResolve = r));
-  FX.intro(introData, (played) => { if (played && !el.chef.hidden) FX.ticketIn(el.chef, { first: true }); });
-
-  // ---------- 奶娃大厨的取餐单 + 各食堂硬菜排行 ----------
-  const CHEF_HELLO = {
-    breakfast: ["早上好呀，先吃早饭！", "起床啦，早饭要吃饱～", "今天也元气满满！"],
-    lunch: ["午饭时间到！", "肚子咕咕叫了吧？", "中午吃顿好的！"],
-    dinner: ["晚饭时间到！", "忙了一天，犒劳一下！", "晚上吃点硬的！"],
-  };
+  // ---------- 奶娃推荐：这一餐各食堂排个序（首页一句话 + 一屏一个食堂） ----------
   function chefPlan(now = new Date()) {
     const m = now.getHours() * 60 + now.getMinutes();
     if (m >= 20 * 60 + 30) return { date: addDays(todayIso, 1), meal: "breakfast", late: true };
     return { date: todayIso, meal: mealForNow(now), late: false };
   }
-  async function renderChef() {
+  const FOOD_SETS = [
+    ["drumstick", "chili", "egg"], ["dumpling", "broccoli", "chili"], ["chili", "drumstick", "strawberry"],
+    ["strawberry", "egg", "dumpling"], ["broccoli", "strawberry", "egg"],
+  ];
+  // 食物在画面里的位置（相对舞台）
+  const FOOD_SLOTS = [
+    { x: "8%", y: "48%", w: "clamp(70px, 11vw, 150px)", depth: 1.4 },
+    { x: "72%", y: "26%", w: "clamp(56px, 8vw, 120px)", depth: 0.8 },
+    { x: "66%", y: "72%", w: "clamp(64px, 9vw, 130px)", depth: 1.8 },
+  ];
+  const hallColor = (slug) => state.colors[slug] || RED;
+  const hallImg = (slug) => `icons/naiwa-${(state.codes[slug] || "c1").toLowerCase()}.webp`;
+  const imgTag = (src, cls = "") => `<img${cls ? ` class="${cls}"` : ""} src="${src}" alt="" decoding="async" onerror="this.onerror=null;this.src='icons/naiwa-chef.png'">`;
+  const titleLines = (name) => name.replace(/\s*Market$/i, "").split(/\s+/).map((w) => `<span class="ln"><span>${esc(w)}</span></span>`).join("");
+
+  let storyRows = [], storyIdx = -1, storyPlan = null;
+  async function renderStory() {
     const plan = chefPlan();
     const day = await loadDay(plan.date);
     const rows = state.halls.map((h) => {
@@ -516,73 +528,145 @@
     const ranked = rows.filter((r) => r.picks.length).sort((a, b) => b.picks.length - a.picks.length || b.score - a.score);
     const closed = rows.filter((r) => !r.picks.length);
     state.best = ranked.length ? ranked[0].h.slug : null;
+    const order = [...ranked, ...closed];
+    const key = JSON.stringify([plan, order.map((r) => [r.h.slug, r.picks.slice(0, 4).map((p) => p.it.n)])]);
+    if (key === renderStory.key) return;
+    renderStory.key = key;
+    storyRows = order; storyPlan = plan;
     const when = plan.late ? "明早" : { breakfast: "今早", lunch: "中午", dinner: "今晚" }[plan.meal];
-    const whenMeal = `${plan.late ? "明天" : "今天"}${MEAL_ZH[plan.meal]}`;
-    const filterNote = state.filters.size
-      ? `按「${[...state.filters].map((f) => el.filters.querySelector(`[data-f="${f}"]`).textContent).join("、")}」筛过 · ` : "";
-    const now = new Date();
-    const printed = `${dayLabel(todayIso)} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const hello = plan.late ? "夜深啦，食堂都关门咯，明早见！" : CHEF_HELLO[plan.meal][now.getDate() % 3];
-    const mascot = `<div class="t-mascot" title="戳一下奶娃"><img class="chef-img" src="icons/naiwa-chef.png" alt="奶娃大厨" width="320" height="430" decoding="async"></div>`;
 
-    let html;
-    if (!ranked.length) {
-      html = `${mascot}<div class="t-head m"><span>奶娃大厨 · 取餐单</span><span>${printed}</span></div>
-        <div class="t-title"><h1><span class="t-when">${when}${MEAL_ZH[plan.meal]}</span><span class="t-hall">菜单还没出来</span></h1></div>
-        <p class="t-hello">${filterNote}${hello}</p>
-        <hr class="dash"><p class="t-empty">奶娃也不知道该推荐哪儿，先看看别的日子吧。</p>`;
+    // 首页那句话
+    const heroGo = $("#heroGo");
+    if (ranked.length) {
+      const best = ranked[0];
+      $("#heroWhen").textContent = `${when}就去`;
+      $("#heroPick").innerHTML = `<em>${esc(best.h.name.replace(/\s*Market$/i, ""))}</em>`;
+      heroGo.innerHTML = `${state.codes[best.h.slug]} · ${best.picks.length} 个窗口有硬菜 <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>`;
+      heroGo.hidden = false;
     } else {
-      const best = ranked[0], second = ranked[1];
-      const code = state.codes[best.h.slug];
-      const top3 = best.picks.slice(0, 3);
-      html = `${mascot}<div class="t-head m"><span>奶娃大厨 · 取餐单</span><span>${printed}</span></div>
-        <div class="t-title"><span class="t-code" aria-hidden="true">${code}</span>
-          <h1><span class="t-when">${when}去</span><span class="t-hall">${esc(best.h.name)}</span></h1></div>
-        <div class="t-note"><p class="t-hello">${filterNote}${hello}</p><span class="t-stamp" aria-hidden="true">奶娃<br>推荐</span></div>
-        <hr class="dash">
-        <ol class="t-dishes">${top3.map((p) => `<li><div class="line"><span>${esc(p.it.zh || p.it.n)}</span><span class="lead"></span>${calHTML(p.it)}</div><span class="sub">窗口 · ${esc(p.st)}</span></li>`).join("")}</ol>
-        <div class="line t-total m"><span>共 ${top3.length} 道</span><span class="lead"></span><span class="num">${top3.reduce((s, p) => s + (p.it.cal || 0), 0)}</span> <span class="unit">千卡</span></div>
-        <hr class="dash">
-        <div class="t-foot m">${best.picks.length} 个窗口有硬菜${second ? ` · 备选 ${state.codes[second.h.slug]} ${esc(shortHall(second.h.name))}` : ""}</div>
-        <button type="button" class="chef-go" data-hall="${esc(best.h.slug)}" data-date="${plan.date}" data-meal="${plan.meal}">就去这家 ${ARROW}</button>`;
+      $("#heroWhen").textContent = plan.late ? "夜深啦，" : `${when}${MEAL_ZH[plan.meal]}`;
+      $("#heroPick").innerHTML = plan.late ? "明早<em>见</em>" : "菜单<em>还没出来</em>";
+      heroGo.hidden = true;
     }
-    introResolve(ranked.length ? {
-      code: state.codes[ranked[0].h.slug], when: `${when}去`, hall: ranked[0].h.name,
-      dishes: ranked[0].picks.slice(0, 3).map((p) => ({ name: p.it.zh || p.it.n, cal: p.it.cal })),
-    } : { empty: true, when: `${when}${MEAL_ZH[plan.meal]}` });
-    const box = el.chef;
-    if (renderChef.html !== html || box.hidden) {
-      const first = box.hidden;
-      renderChef.html = html;
-      box.innerHTML = html;
-      box.hidden = false;
-      FX.ticketIn(box, { first });
-    }
+    // 首页飘着的五个奶娃：推荐的那家在正中间最前面
+    const heroOrder = order.slice(1, 3).concat(order.slice(0, 1), order.slice(3));
+    $("#heroFloat").innerHTML = heroOrder.map((r, i) => {
+      return `<div class="hf s${i}" data-sp="${[0.35, 0.55, 0.2, 0.6, 0.4][i] || 0.3}"><div class="hf-in">${imgTag(hallImg(r.h.slug))}</div></div>`;
+    }).join("");
 
-    // 排行：和地图、菜单用同一套取餐号
-    el.rank.innerHTML = `<div class="rank-head"><h2 id="rankTitle">${whenMeal} · 各食堂硬菜</h2><span class="m">有硬菜的窗口</span></div>
-      <ol>${ranked.map((r, i) => `<li><button type="button" data-hall="${esc(r.h.slug)}" class="${r.h.slug === state.hall ? "current" : ""} ${i === 0 ? "is-best" : ""}">
-          <span class="line"><span><span class="code">${state.codes[r.h.slug]}</span><span class="hall">${esc(shortHall(r.h.name))}</span></span><span class="lead"></span><span class="num">${r.picks.length}</span></span>
-          <span class="sub">${esc(r.picks[0].it.zh || r.picks[0].it.n)}</span></button></li>`).join("")}
-        ${closed.map((r) => `<li><button type="button" data-hall="${esc(r.h.slug)}" class="closed ${r.h.slug === state.hall ? "current" : ""}">
-          <span class="line"><span><span class="code">${state.codes[r.h.slug]}</span><span class="hall">${esc(shortHall(r.h.name))}</span></span><span class="lead"></span><span class="num">0</span></span>
-          <span class="sub">这一餐没有硬菜${state.filters.size ? "（按筛选）" : ""}</span></button></li>`).join("")}</ol>`;
-    el.rank.hidden = false;
+    // 一屏一个食堂
+    story.style.setProperty("--n", order.length);
+    $("#stBg").innerHTML = order.map((r) => `<div class="st-bg" style="--hc:${hallColor(r.h.slug)}"></div>`).join("");
+    $("#stFigs").innerHTML = order.map((r, i) => {
+      const foods = FOOD_SETS[state.halls.indexOf(r.h) % FOOD_SETS.length];
+      return `<div class="st-fig" data-i="${i}">${imgTag(hallImg(r.h.slug))}</div>` +
+        foods.map((f, k) => { const s = FOOD_SLOTS[k]; return `<div class="st-food" data-i="${i}" data-depth="${s.depth}" style="--x:${s.x};--y:${s.y};--w:${s.w}"><img src="icons/food-${f}.webp" alt="" decoding="async" onerror="this.parentNode.remove()"></div>`; }).join("");
+    }).join("");
+    $("#stSlides").innerHTML = order.map((r, i) => {
+      const code = state.codes[r.h.slug];
+      const top = r.picks[0] && (r.picks[0].it.zh || r.picks[0].it.n);
+      const badge = !r.picks.length ? "休息" : i === 0 ? "奶娃首推" : `第 ${i + 1}`;
+      const line = !r.picks.length ? `这一餐<em>没有硬菜</em>，换一家吧`
+        : i === 0 ? `奶娃<em>首推</em>：今天有${esc(top)}`
+        : i === 1 ? `想吃<em>${esc(top)}</em>？来这儿也不错`
+        : `${r.picks.length} 个窗口有硬菜，<em>${esc(top)}</em>打头阵`;
+      const list = r.picks.length
+        ? `<ol>${r.picks.slice(0, 4).map((p) => `<li><b>${esc(p.it.zh || p.it.n)}</b>${p.it.cal != null ? `<span>${p.it.cal} 千卡</span>` : ""}</li>`).join("")}</ol>`
+        : `<p class="none">${state.filters.size ? "按你的筛选，这一餐没有合适的硬菜" : "这一餐没有菜单"}</p>`;
+      return `<article class="slide" data-i="${i}" style="--hc:${hallColor(r.h.slug)}" aria-labelledby="st-${i}">
+        <div class="s-head">
+          <h3 class="s-title" id="st-${i}">${titleLines(r.h.name)}</h3>
+          <p class="s-sub"><span class="badge">${badge}</span>${code} · ${when}${MEAL_ZH[plan.meal]}${r.picks.length ? ` · ${r.picks.length} 个窗口有硬菜` : ""}</p>
+        </div>
+        <p class="s-line">${line}</p>
+        <div class="s-foot">
+          <div class="s-list"><p class="lbl">今日硬菜</p>${list}</div>
+          <button type="button" class="s-go" data-hall="${esc(r.h.slug)}">看菜单 ${ARROW}</button>
+        </div>
+      </article>`;
+    }).join("");
+    $("#stDots").innerHTML = order.map((r, i) => `<li><button type="button" data-i="${i}" aria-label="${esc(r.h.name)}">${state.codes[r.h.slug]}</button></li>`).join("");
+    storyIdx = -1;
+    onScroll();
   }
-  el.chef.addEventListener("click", (e) => {
-    if (e.target.closest(".t-mascot")) { FX.chefJump(e.target.closest(".t-mascot")); return; }
-    const go = e.target.closest(".chef-go");
-    if (go) {
-      state.date = go.dataset.date; state.meal = go.dataset.meal;
-      selectHall(go.dataset.hall);
+
+  function setStory(i, dir) {
+    const prev = storyIdx;
+    storyIdx = i;
+    const all = (sel) => [...story.querySelectorAll(sel)];
+    all(".st-bg").forEach((b, k) => b.classList.toggle("on", k === i));
+    all(".slide").forEach((s) => s.classList.toggle("on", +s.dataset.i === i));
+    all("#stDots button").forEach((b) => b.setAttribute("aria-current", +b.dataset.i === i));
+    const figs = all(".st-fig"), foods = all(".st-food");
+    figs.forEach((f) => f.classList.toggle("on", +f.dataset.i === i));
+    foods.forEach((f) => f.classList.toggle("on", +f.dataset.i === i));
+    if (prev >= 0) {
+      FX.figOut(figs[prev].querySelector("img"), dir);
+      FX.foodsOut(foods.filter((f) => +f.dataset.i === prev).map((f) => f.querySelector("img")), dir);
     }
+    FX.figIn(figs[i].querySelector("img"), dir);
+    FX.foodsIn(foods.filter((f) => +f.dataset.i === i).map((f) => f.querySelector("img")), dir);
+    FX.slideIn(story.querySelector(`.slide[data-i="${i}"]`), dir);
+  }
+
+  // 滚动驱动：哪一屏、奶娃和食物跟着滚动轻轻转、漂；首页的奶娃往上飘散
+  let mx = 0, my = 0, ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      const vh = window.innerHeight, y = window.scrollY;
+      // 首页
+      if (!reduceMotion && y < vh * 1.2) {
+        hero.querySelectorAll(".hf").forEach((f, i) => {
+          const sp = +f.dataset.sp || 0.3;
+          f.style.transform = `translate(${mx * (10 + i * 6)}px, ${-y * sp + my * (8 + i * 4)}px) rotate(${y * 0.02 * (i % 2 ? 1 : -1)}deg)`;
+        });
+        const wm = hero.querySelector(".wordmark");
+        wm.style.opacity = String(Math.max(0, 1 - y / (vh * 0.8)));
+      }
+      // 故事
+      const n = storyRows.length;
+      if (n) {
+        const r = story.getBoundingClientRect();
+        const p = Math.max(0, Math.min(n - 1, -r.top / vh));
+        const i = Math.round(p), frac = p - i;
+        if (i !== storyIdx) setStory(i, i >= storyIdx ? 1 : -1);
+        if (!reduceMotion) {
+          const fig = story.querySelector(`.st-fig[data-i="${i}"]`);
+          if (fig) fig.style.transform = `translateY(${frac * -70}px) rotate(${frac * -9}deg)`;
+          story.querySelectorAll(`.st-food[data-i="${i}"]`).forEach((f) => {
+            f.style.transform = `translateY(${frac * -220 * (+f.dataset.depth || 1)}px) rotate(${frac * 40 * (+f.dataset.depth || 1)}deg)`;
+          });
+        }
+        // 顶栏按钮跟当前画面换颜色
+        const inStory = r.top <= 1 && r.bottom > vh * 0.5;
+        const menuTop = menuSec.getBoundingClientRect().top;
+        const onLight = menuTop <= nav.offsetHeight;
+        nav.classList.toggle("on-light", onLight);
+        setHC(onLight ? hallColor(state.hall) : inStory ? hallColor(storyRows[i].h.slug) : RED);
+      }
+    });
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll);
+  if (window.matchMedia("(hover: hover)").matches) {
+    hero.addEventListener("pointermove", (e) => {
+      mx = (e.clientX / window.innerWidth - 0.5) * 2; my = (e.clientY / window.innerHeight - 0.5) * 2; onScroll();
+    });
+  }
+  story.addEventListener("click", (e) => {
+    const go = e.target.closest(".s-go");
+    if (go) {
+      state.date = storyPlan.date; state.meal = storyPlan.meal;
+      return selectHall(go.dataset.hall);
+    }
+    const dot = e.target.closest("#stDots button");
+    if (dot) window.scrollTo({ top: story.offsetTop + +dot.dataset.i * window.innerHeight, behavior: reduceMotion ? "auto" : "smooth" });
   });
-  el.rank.addEventListener("click", (e) => {
-    const b = e.target.closest("[data-hall]"); if (!b) return;
-    const plan = chefPlan();
-    state.date = plan.date; state.meal = plan.meal;
-    selectHall(b.dataset.hall);
-  });
+  $("#heroGo").addEventListener("click", () => window.scrollTo({ top: story.offsetTop, behavior: reduceMotion ? "auto" : "smooth" }));
+  $("#menuBtn").addEventListener("click", () => goToMenu());
 
   // ---------- 事件 ----------
   el.halls.addEventListener("click", (e) => {
@@ -645,21 +729,30 @@
   });
 
   // ---------- 启动 ----------
-  (async () => {
+  const boot = (async () => {
     try {
       const h = await loadJSON("data/halls.json");
       state.halls = h.halls || [];
     } catch {
       el.menu.innerHTML = emptyHTML("加载失败", "检查一下网络，然后刷新页面");
-      introResolve(null);
       return;
     }
     // 取餐号：首字母 + 序号（C1 Carson's … R5 Rheta's），小票、排行、地图、菜单都用同一个
-    state.halls.forEach((h, i) => { state.codes[h.slug] = h.name.trim()[0].toUpperCase() + (i + 1); });
+    state.halls.forEach((h, i) => {
+      state.codes[h.slug] = h.name.trim()[0].toUpperCase() + (i + 1);
+      state.colors[h.slug] = HALL_COLORS[i % HALL_COLORS.length];
+    });
     if (!hallBy(state.hall)) state.hall = state.halls[0] && state.halls[0].slug;
     if (lsGet("uwdining.map")) setMapOpen(true);
-    render();
+    await render();
   })();
+  // 开场：数据和首页图片都到了再收起转圈的奶娃，然后首页进场
+  const imgsLoaded = () => Promise.all([...hero.querySelectorAll("img")].map((im) => im.complete ? 0 : new Promise((r) => { im.onload = im.onerror = r; })));
+  FX.loader(boot.then(imgsLoaded).then(() => document.fonts && document.fonts.ready), (played) => {
+    if (!played) return;
+    FX.heroIn(hero);
+    setTimeout(() => FX.bob([...hero.querySelectorAll(".hf-in")]), 1500);
+  });
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {});

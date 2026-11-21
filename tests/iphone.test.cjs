@@ -73,8 +73,8 @@ async function run(browserType, deviceName, scheme) {
 
   // 选了食堂以后，这一餐的硬菜在菜单最上面，点一下跳到列表里那道菜
   const hardRows = await page.locator(".hard-block li").count();
-  const hardAbove = await page.evaluate(() => { const h = document.querySelector("#hardSlot .hard-block"), q = document.querySelector(".search"); return !!h && h.getBoundingClientRect().top < q.getBoundingClientRect().top; });
-  check(hardRows > 0 && hardAbove, `硬菜紧跟在食堂按钮下面、搜索框上面（${hardRows} 道）`);
+  const hardAbove = await page.evaluate(() => { const h = document.querySelector("#hardSlot .hard-block"), q = document.querySelector("#menu .station"); return !!h && h.getBoundingClientRect().top < q.getBoundingClientRect().top; });
+  check(hardRows > 0 && hardAbove, `硬菜在菜单列表最上面（${hardRows} 道）`);
   check(await page.locator(".item.is-hard .tag.hard").count() === hardRows, "列表里的硬菜都有标签");
   await page.locator(".hard-block a").first().click();
   await page.waitForTimeout(700);
@@ -131,25 +131,26 @@ async function run(browserType, deviceName, scheme) {
   });
   check(ink === true, "Motion 动效已加载，餐次白条对准选中标签");
 
-  // 奶娃大厨
-  await page.waitForSelector("#chef:not([hidden])");
-  const chefText = await page.locator("#chef").innerText();
-  check(/去|还没出来/.test(chefText) && (await page.locator("#chef h1").count()) === 1, `奶娃大厨出现：${chefText.replace(/\s+/g, " ").slice(0, 70)}…`);
-  await page.waitForTimeout(1200);
-  await page.locator("#chef").screenshot({ path: path.join(SHOTS, `${tag}-5-chef.png`) });
-  if (await page.locator("#chef .chef-go").count()) {
-    const target = await page.locator("#chef .chef-go").getAttribute("data-hall");
-    await page.click("#chef .chef-go");
-    await page.waitForTimeout(300);
-    const chosenSlug = await page.locator('.halls [aria-pressed="true"]').getAttribute("data-hall");
-    check(chosenSlug === target, `点“就去这家”切到 ${target}`);
+  // 奶娃推荐：首页一句话 + 一屏一个食堂（推荐的排第一屏）
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const heroText = (await page.locator(".hero-copy").innerText()).replace(/\s+/g, " ");
+  check(/就去|还没出来|明早/.test(heroText), `首页推荐：${heroText.slice(0, 40)}`);
+  check(await page.locator(".slide").count() === 5, "一屏一个食堂，共 5 屏");
+  const firstHall = await page.locator(".slide").first().locator(".s-go").getAttribute("data-hall");
+  if (await page.locator("#heroGo").isVisible()) {
+    const firstTitle = (await page.locator(".slide").first().locator(".s-title").innerText()).replace(/\s+/g, " ").toLowerCase();
+    check(heroText.toLowerCase().includes(firstTitle.split(" ")[0]), `首页推荐和第一屏是同一家：${firstTitle}`);
   }
-  // 排行：5 个食堂，点一行切到那家
-  check(await page.locator("#rank button[data-hall]").count() === 5, "硬菜排行列出 5 个食堂");
-  const rankSlug = await page.locator("#rank button[data-hall]").nth(1).getAttribute("data-hall");
-  await page.locator("#rank button[data-hall]").nth(1).click();
-  await page.waitForTimeout(300);
-  check(await page.locator('.halls [aria-pressed="true"]').getAttribute("data-hall") === rankSlug, `点排行第二名切到 ${rankSlug}`);
+  await page.evaluate(() => window.scrollTo(0, document.querySelector("#story").offsetTop + innerHeight));
+  await page.waitForTimeout(700);
+  check(await page.locator(".slide.on").getAttribute("data-i") === "1", "往下滚一屏换到第二个食堂");
+  await page.screenshot({ path: path.join(SHOTS, `${tag}-5-story.png`) });
+  const secondHall = await page.locator(".slide.on .s-go").getAttribute("data-hall");
+  await page.locator(".slide.on .s-go").click();
+  await page.waitForTimeout(900);
+  check(await page.locator('.halls [aria-pressed="true"]').getAttribute("data-hall") === secondHall, `点“看菜单”切到 ${secondHall}`);
+  check(await page.evaluate(() => Math.abs(document.querySelector("#menuSec").getBoundingClientRect().top) < 40), "并滚到菜单");
+  check(firstHall !== secondHall, "两屏是不同的食堂");
   const codes = await page.locator(".halls .code").allInnerTexts();
   check(codes.join(",") === "C1,F2,G3,L4,R5", `取餐号 ${codes.join(" ")}`);
 
@@ -220,9 +221,9 @@ async function desktopHover() {
   await browser.close();
 }
 
-// 开场动画：功夫奶娃端上取餐单，推荐的食堂和取餐单一致；播完或点一下就让出页面
-async function introAnim(browserType, deviceName) {
-  const tag = `intro-${browserType.name()}-${deviceName.replace(/\s+/g, "")}`;
+// 开场：转圈的奶娃数到 100%，然后首页进场；减少动态效果时不放
+async function loaderAnim(browserType, deviceName) {
+  const tag = `loader-${browserType.name()}-${deviceName.replace(/\s+/g, "")}`;
   console.log(`
 == ${tag} ==`);
   const browser = await browserType.launch();
@@ -231,35 +232,21 @@ async function introAnim(browserType, deviceName) {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(`${base}/`);
-  check(await page.locator("#intro").isVisible(), "打开就是全屏开场");
-  const box = await page.locator("#intro").boundingBox();
-  const vp = page.viewportSize();
-  check(box && box.width >= vp.width - 1 && box.height >= vp.height - 1, "开场占满整个屏幕");
-  await page.waitForTimeout(700);
-  await page.screenshot({ path: path.join(SHOTS, `${tag}-1-kick.png`) });
-  await page.waitForSelector(".in-hall", { timeout: 5000 });
-  await page.waitForTimeout(1300);
-  await page.screenshot({ path: path.join(SHOTS, `${tag}-2-ticket.png`) });
-  const hall = await page.locator(".in-hall").innerText();
-  await page.waitForSelector("#intro", { state: "detached", timeout: 6000 });
-  check(true, "开场自动播完");
-  const h1 = await page.locator("#chef h1").innerText();
-  check(h1.replace(/\s+/g, "").includes(hall.replace(/\s+/g, "")), `开场推荐和取餐单一致：${hall}`);
-  check(await page.evaluate(() => getComputedStyle(document.body).overflowY !== "hidden"), "播完能滚动");
-  await page.reload();
-  await page.waitForTimeout(500);
-  await page.mouse.click(vp.width / 2, vp.height / 2);
-  await page.waitForSelector("#intro", { state: "detached", timeout: 1500 });
-  check(true, "点一下跳过开场");
-  await page.click('.meals [data-meal="lunch"]');
-  check(await page.locator('.meals [data-meal="lunch"]').getAttribute("aria-selected") === "true", "跳过后页面能点");
+  check(await page.locator("#loader").isVisible(), "打开先是转圈的奶娃");
+  await page.waitForSelector("#loader", { state: "detached", timeout: 9000 });
+  check(true, "数到 100% 以后让出页面");
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: path.join(SHOTS, `${tag}-hero.png`) });
+  check(await page.locator(".hf img").count() >= 3, "首页飘着奶娃");
+  check(await page.evaluate(() => getComputedStyle(document.body).overflowY !== "hidden"), "开场结束能滚动");
+  check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "没有横向滚动");
   check(errors.length === 0, `没有页面错误${errors.length ? "：" + errors.join(" | ") : ""}`);
   await browser.close();
   const rm = await chromium.launch();
   const p2 = await rm.newPage({ reducedMotion: "reduce" });
   await p2.goto(`${base}/`);
   await p2.waitForSelector(".station, .empty-state");
-  check(await p2.locator("#intro").isHidden(), "减少动态效果时不放开场");
+  check(await p2.locator("#loader").isHidden(), "减少动态效果时不放开场");
   await rm.close();
 }
 
@@ -273,9 +260,9 @@ let base;
     await run(webkit, "iPhone SE", "dark");
     await run(chromium, "iPhone 15", "light"); // WebKit 驱动下 SW 支持有限，用 Chromium 测离线
     await desktopHover();
-    await introAnim(webkit, "iPhone 15");
-    await introAnim(webkit, "iPhone SE");
-    await introAnim(chromium, "Desktop Chrome");
+    await loaderAnim(webkit, "iPhone 15");
+    await loaderAnim(webkit, "iPhone SE");
+    await loaderAnim(chromium, "Desktop Chrome");
   } finally {
     srv.close();
   }
